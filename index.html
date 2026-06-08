@@ -37,8 +37,12 @@
         .controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
         .controls-top { display: flex; justify-content: space-between; align-items: center; }
         .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        #admin-number-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; }
+        #admin-board-popup { overflow: hidden; }
         
         .number-box { aspect-ratio: 1; border: 1px solid #d1d1d6; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; cursor: pointer; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s; }
+        #admin-number-grid .number-box { font-size: 14px; border-radius: 8px; }
+        #admin-number-grid .name-tag { font-size: 9px; margin-top: 3px; }
         .number-box.occupied-self { background-color: #34c759; color: white; border-color: #34c759; }
         .number-box.occupied-crew { background-color: #007aff; color: white; border-color: #007aff; }
         .number-box.disabled { background-color: #e5e5ea; color: #aeaeae; border-color: #d1d1d6; cursor: not-allowed; }
