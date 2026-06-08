@@ -426,9 +426,11 @@
     }
 
     // =====================================
-    // [수정] 번호 토글
-    // - baseUser로 크루/본인 관계없이 내 자리 탐색
-    // - 딜레이 150ms로 단축
+    // 번호 토글
+    // 규칙: 본인 슬롯(초록)과 크루 슬롯(파란)은 완전히 독립
+    //   - 본인 모드: 본인 슬롯만 관리 (크루 슬롯에 영향 없음)
+    //   - 크루 모드: 크루 슬롯만 관리 (본인 슬롯에 영향 없음)
+    //   → 결과적으로 최대 본인 1개 + 크루 1개 동시 유지 가능
     // =====================================
     async function toggleNumber(num, currentOccupant, isOccupied) {
         if (isProcessingClick) return;
@@ -436,10 +438,11 @@
 
         try {
             const timeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+            // 현재 모드에 맞는 displayName
             const displayName = currentMode === "크루" ? `${currentUser}(크루)` : currentUser;
             const logRef = ref(db, "system/boardState/log");
 
-            // 수정(뺏기) 모드
+            // ── 수정(뺏기) 모드 ──
             if (isEditMode && isOccupied) {
                 if (currentOccupant.split('(')[0] === currentUser) {
                     alert("이미 본인이 사용 중인 번호입니다.");
@@ -456,64 +459,73 @@
                 return;
             }
 
-            // 점유된 번호 반납
+            // ── 점유된 자리 클릭 ──
             if (isOccupied) {
-                // 본인 소유 번호인지 확인 (크루/본인 모드 무관하게 이름 기준)
                 const occupantBase = currentOccupant.split('(')[0];
+                // 내 자리인지 확인
                 if (occupantBase !== currentUser) {
                     alert("본인의 번호판만 반납할 수 있습니다.\n(다른 사람의 번호를 뺏으려면 상단의 [수정] 버튼을 켜주세요)");
                     return;
                 }
+                // 반납
                 await remove(ref(db, `system/boardState/numbers/${num}`));
-                await push(logRef, { time: timeStr, num: num, action: "반납", user: currentUser });
+                await push(logRef, { time: timeStr, num: num, action: "반납", user: displayName });
+                return;
             }
-            // 빈 자리 선택
-            else {
-                // 내 기존 자리 탐색: 크루/본인 모드 모두 포함해서 찾기
-                const existEntry = Object.entries(currentBoardNumbers).find(
-                    ([k, v]) => v && v.split('(')[0] === currentUser
-                );
 
-                if (existEntry) {
-                    if (!confirm(`이미 ${existEntry[0]}번을 선택 중입니다. 자리 이동을 하시겠습니까?`)) return;
-
-                    // 기존 자리 삭제 + 새 자리 배정을 트랜잭션으로 묶기
-                    const res = await runTransaction(ref(db, "system/boardState/numbers"), (numbers) => {
-                        if (!numbers) numbers = {};
-                        if (numbers[num] && numbers[num].split('(')[0] !== currentUser) return; // 다른 사람이 차지했으면 취소
-                        // 내 기존 자리 모두 삭제 (크루/본인 무관)
-                        Object.keys(numbers).forEach(k => {
-                            if (numbers[k] && numbers[k].split('(')[0] === currentUser) delete numbers[k];
-                        });
-                        numbers[num] = displayName;
-                        return numbers;
-                    });
-
-                    if (res.committed) {
-                        await push(logRef, { time: timeStr, num: num, action: "자리이동", user: displayName });
-                    } else {
-                        alert("간발의 차이로 다른 사람이 먼저 번호를 선택했습니다.");
-                    }
-                    return;
+            // ── 빈 자리 선택 ──
+            // 현재 모드에 해당하는 내 기존 슬롯만 탐색
+            //   본인 모드 → "홍길동" 형태인 내 슬롯 탐색
+            //   크루 모드 → "홍길동(크루)" 형태인 내 슬롯 탐색
+            const existEntry = Object.entries(currentBoardNumbers).find(([k, v]) => {
+                if (!v) return false;
+                if (currentMode === "크루") {
+                    return v === `${currentUser}(크루)`;
+                } else {
+                    return v === currentUser; // 이름만 정확히 일치 (크루 슬롯 제외)
                 }
+            });
 
-                // 단순 빈 자리 선택 트랜잭션
-                const res = await runTransaction(ref(db, `system/boardState/numbers/${num}`), (currentData) => {
-                    if (currentData === null) return displayName;
-                    return; // 이미 있으면 무시
+            if (existEntry) {
+                // 같은 모드 내 자리이동
+                if (!confirm(`이미 ${existEntry[0]}번을 선택 중입니다. 자리 이동을 하시겠습니까?`)) return;
+
+                const res = await runTransaction(ref(db, "system/boardState/numbers"), (numbers) => {
+                    if (!numbers) numbers = {};
+                    // 목표 자리가 다른 사람이 차지했으면 중단
+                    if (numbers[num] && numbers[num] !== displayName) return;
+                    // 현재 모드 슬롯만 삭제
+                    Object.keys(numbers).forEach(k => {
+                        if (numbers[k] === displayName) delete numbers[k];
+                    });
+                    numbers[num] = displayName;
+                    return numbers;
                 });
 
                 if (res.committed) {
-                    await push(logRef, { time: timeStr, num: num, action: "선택", user: displayName });
+                    await push(logRef, { time: timeStr, num: num, action: "자리이동", user: displayName });
                 } else {
                     alert("간발의 차이로 다른 사람이 먼저 번호를 선택했습니다.");
                 }
+                return;
             }
+
+            // 신규 빈 자리 선택 (트랜잭션으로 충돌 방지)
+            const res = await runTransaction(ref(db, `system/boardState/numbers/${num}`), (currentData) => {
+                if (currentData === null) return displayName;
+                return; // 이미 누가 있으면 무시
+            });
+
+            if (res.committed) {
+                await push(logRef, { time: timeStr, num: num, action: "선택", user: displayName });
+            } else {
+                alert("간발의 차이로 다른 사람이 먼저 번호를 선택했습니다.");
+            }
+
         } catch (e) {
             console.error("toggleNumber 오류:", e);
             alert("처리 중 오류가 발생했습니다. 다시 시도해주세요.");
         } finally {
-            // [수정] 딜레이 400ms → 150ms
             setTimeout(() => { isProcessingClick = false; }, 150);
         }
     }
