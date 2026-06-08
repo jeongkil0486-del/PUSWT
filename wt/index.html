@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="W.T">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="W.T">
+    
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=W+T&background=007aff&color=fff&size=192">
+    <link rel="icon" sizes="192x192" href="https://ui-avatars.com/api/?name=W+T&background=007aff&color=fff&size=192">
+
+    <title>W.T 시스템</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Malgun Gothic', sans-serif; background-color: #f5f7fa; color: #333; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; }
+        #app-container { max-width: 480px; margin: 0 auto; background-color: #ffffff; min-height: 100vh; position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
+        .hidden { display: none !important; }
+        
+        /* 헤더 및 버튼 */
+        header { background-color: #007aff; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .btn { padding: 10px 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
+        .btn:active { opacity: 0.8; }
+        .btn-primary { background-color: #007aff; color: white; }
+        .btn-danger { background-color: #ff3b30; color: white; }
+        .btn-secondary { background-color: #8e8e93; color: white; }
+        .btn-warning { background-color: #ffcc00; color: #333; }
+        
+        /* 모드별 버튼 색상 */
+        .btn-mode-self { background-color: #34c759; color: white; }
+        .btn-mode-crew { background-color: #007aff; color: white; }
+
+        /* 알림 배지 */
+        .badge { position: absolute; top: -6px; right: -6px; background-color: #ff3b30; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: bold; display: none; }
+
+        /* 로그인 레이아웃 */
+        .screen { padding: 20px; }
+        .login-box { margin-top: 80px; text-align: center; }
+        .input-field { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #d1d1d6; border-radius: 8px; font-size: 16px; background-color: #fafafa; }
+        
+        /* 메인 화면 그리드 */
+        .controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .controls-top { display: flex; justify-content: space-between; align-items: center; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        
+        /* 번호판 박스 기본 상태 */
+        .number-box { aspect-ratio: 1; border: 1px solid #d1d1d6; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; cursor: pointer; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s; }
+        
+        /* 번호판 모드별 점유 상태 */
+        .number-box.occupied-self { background-color: #34c759; color: white; border-color: #34c759; }
+        .number-box.occupied-crew { background-color: #007aff; color: white; border-color: #007aff; }
+        .number-box.disabled { background-color: #e5e5ea; color: #aeaeae; border-color: #d1d1d6; cursor: not-allowed; }
+        
+        .name-tag { font-size: 11px; margin-top: 6px; font-weight: normal; word-break: break-all; padding: 0 4px; text-align: center; }
+
+        /* 관리자 기능 블록 */
+        .admin-section { border: 1px solid #e5e5ea; padding: 18px; border-radius: 12px; margin-bottom: 18px; background-color: #f9f9f9; position: relative; }
+        .admin-section h3 { margin: 0 0 10px 0; font-size: 16px; color: #1c1c1e; }
+        
+        /* 명단 드롭다운 */
+        #whitelist-dropdown { position: absolute; top: 45px; left: 18px; right: 18px; background: white; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); max-height: 200px; overflow-y: auto; z-index: 100; padding: 10px; }
+        .whitelist-item { padding: 8px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .whitelist-item:last-child { border-bottom: none; }
+        
+        /* 액션 버튼 그룹 */
+        .action-group { display: flex; gap: 8px; margin-top: 8px; }
+        .action-group .btn { flex: 1; padding: 12px 8px; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div id="login-screen" class="screen">
+        <div class="login-box">
+            <h2 style="color: #007aff; margin-bottom: 30px;">PUS Walkie-Talkie</h2>
+            <input type="text" id="login-id" class="input-field" placeholder="ID (이름)">
+            <input type="password" id="login-pw" class="input-field" placeholder="Password">
+            
+            <button id="btn-login" class="btn btn-primary" style="width: 100%; padding: 16px; font-size: 16px; margin-top: 15px; border-radius: 8px;">로그인</button>
+            <button id="btn-user-reset-req" class="btn btn-secondary" style="width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; background-color: transparent; color: #8e8e93; border: 1px solid #d1d1d6;">비밀번호 초기화 요청</button>
+        </div>
+    </div>
+
+    <div id="main-screen" class="screen hidden">
+        <header>
+            <span id="user-greeting">환영합니다</span>
+            <button id="btn-logout" class="btn btn-secondary">로그아웃</button>
+        </header>
+        <div style="padding: 15px 0;">
+            <div class="controls">
+                <div class="controls-top">
+                    <span id="date-display" style="font-weight: bold; color: #555;"></span>
+                    <button id="btn-return-all" class="btn btn-danger">내 번호 전체 반납</button>
+                </div>
+                <button id="btn-mode" class="btn btn-mode-self" style="width: 100%; padding: 12px; font-size: 16px;">현재 모드: 본인 (초록색)</button>
+            </div>
+            <div id="number-grid" class="grid"></div>
+        </div>
+    </div>
+
+    <div id="admin-screen" class="screen hidden">
+        <header style="background-color: #1c1c1e;">
+            <span>관리자 대시보드</span>
+            <button id="btn-admin-logout" class="btn btn-secondary">로그아웃</button>
+        </header>
+        <div style="padding: 15px 0;">
+            
+            <div class="admin-section" id="admin-user-sec">
+                <h3 id="admin-whitelist-title" style="cursor: pointer; color: #007aff; display: inline-block;">👥 계정 관리 (명단 보기 ▼)</h3>
+                
+                <div id="whitelist-dropdown" class="hidden">
+                    <div style="font-weight: bold; margin-bottom: 5px; color: #007aff;">[등록된 직원 명단]</div>
+                    <div id="whitelist-content">목록이 없습니다.</div>
+                </div>
+
+                <input type="text" id="admin-target-user" class="input-field" placeholder="직원 이름 입력" style="margin-top: 10px;">
+                
+                <div class="action-group">
+                    <button id="btn-add-user" class="btn btn-primary">명단 생성</button>
+                    <button id="btn-delete-user" class="btn btn-danger">계정 삭제</button>
+                    <button id="btn-reset-pw" class="btn btn-warning" style="position: relative;">
+                        PW 초기화
+                        <span id="reset-badge" class="badge"></span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h3>🔢 실시간 번호판 설정</h3>
+                
+                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                    <button id="btn-toggle-admin-board" class="btn btn-secondary" style="flex: 1;">번호판 팝업 토글</button>
+                    <button id="btn-admin-reset-all" class="btn btn-danger" style="flex: 1;">모두 강제 초기화</button>
+                </div>
+                
+                <div id="admin-board-popup" class="hidden" style="margin-bottom: 15px; border: 2px dashed #007aff; padding: 10px; border-radius: 8px; background-color: #fff;">
+                    <p style="font-size: 12px; color: #ff3b30; margin-top: 0; margin-bottom: 10px; text-align: center; font-weight: bold;">※ 박스를 클릭하면 즉시 강제 취소됩니다.</p>
+                    <div id="admin-number-grid" class="grid"></div>
+                </div>
+
+                <div style="display: flex; gap: 8px;">
+                    <input type="number" id="admin-total-nums" class="input-field" placeholder="최대 번호 개수 (기본 20)">
+                    <button id="btn-update-nums" class="btn btn-primary" style="white-space: nowrap;">변경</button>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <input type="number" id="admin-disable-num" class="input-field" placeholder="제한/해제할 번호">
+                    <button id="btn-toggle-disable" class="btn btn-secondary" style="white-space: nowrap;">상태 토글</button>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h3>🔔 미반납자 알람</h3>
+                <button id="btn-send-alarm" class="btn btn-danger" style="width: 100%; padding: 12px;">반납 촉구 알람 전송</button>
+            </div>
+
+            <div class="admin-section">
+                <h3>📊 일별 엑셀 다운로드</h3>
+                <div style="display: flex; gap: 8px;">
+                    <input type="date" id="export-date" class="input-field" style="margin: 0;">
+                    <button id="btn-export-excel" class="btn btn-primary" style="background-color: #34c759; white-space: nowrap;">추출</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, get, update, remove, onValue, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDlcAR1IJ-GM_13wH8XTd2BhVcvs9fZGd8",
+        authDomain: "fltinfo.firebaseapp.com",
+        databaseURL: "https://fltinfo-default-rtdb.firebaseio.com",
+        projectId: "fltinfo",
+        storageBucket: "fltinfo.firebasestorage.app",
+        messagingSenderId: "77715217220",
+        appId: "1:77715217220:web:8f940ae71f01e068ef9511",
+        measurementId: "G-NTHVH61ZLS"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let currentUser = null;
+    let isAdmin = false;
+    let currentMode = "본인"; 
+    let pendingResets = [];
+    
+    const getTodayString = () => {
+        const offset = new Date().getTimezoneOffset() * 60000;
+        const dateOffset = new Date(Date.now() - offset);
+        return dateOffset.toISOString().split('T')[0];
+    };
+    let todayString = getTodayString();
+    
+    const screens = { login: document.getElementById('login-screen'), main: document.getElementById('main-screen'), admin: document.getElementById('admin-screen') };
+
+    // 자동 로그인
+    window.onload = async () => {
+        const savedUser = localStorage.getItem('PUS_currentUser');
+        const savedIsAdmin = localStorage.getItem('PUS_isAdmin') === 'true';
+        if (savedUser) {
+            await checkDailyReset();
+            processLoginAction(savedUser, savedIsAdmin);
+        }
+    };
+
+    function processLoginAction(id, adminFlag) {
+        currentUser = id; isAdmin = adminFlag;
+        localStorage.setItem('PUS_currentUser', id);
+        localStorage.setItem('PUS_isAdmin', adminFlag);
+
+        if (isAdmin) {
+            switchScreen('admin');
+            listenToAdminBoard();
+            listenToResetRequests();
+        } else {
+            document.getElementById('user-greeting').innerText = `${id}님 환영합니다`;
+            document.getElementById('date-display').innerText = todayString;
+            switchScreen('main');
+            listenToBoard();
+            listenToAlarms();
+        }
+    }
+
+    async function checkDailyReset() {
+        todayString = getTodayString();
+        const boardStateRef = ref(db, "system/boardState");
+        const snap = await get(boardStateRef);
+        
+        if (snap.exists()) {
+            const data = snap.val();
+            if (data.date && data.date !== todayString) {
+                await set(ref(db, `history/${data.date}`), { state: data.numbers || {}, log: data.log || {} });
+                await update(boardStateRef, { date: todayString, numbers: {}, log: {} });
+            }
+        } else {
+            await set(boardStateRef, { date: todayString, numbers: {}, log: {} });
+            await set(ref(db, "system/config"), { totalNumbers: 20, disabledNumbers: {} });
+        }
+        document.getElementById('export-date').value = todayString;
+    }
+
+    // 로그인
+    document.getElementById('btn-login').addEventListener('click', async () => {
+        const id = document.getElementById('login-id').value.trim();
+        const pw = document.getElementById('login-pw').value.trim();
+        
+        if(!id || !pw) return alert("ID(이름)와 비밀번호를 모두 입력해주세요.");
+
+        if (id === "PUSWT" && pw === "PUSWT") {
+            await checkDailyReset(); 
+            processLoginAction(id, true);
+            return;
+        }
+
+        try {
+            await checkDailyReset(); 
+            const userSnap = await get(ref(db, `users/${id}`));
+            
+            if (userSnap.exists()) {
+                if (userSnap.val().pw === pw) processLoginAction(id, false);
+                else alert("비밀번호가 올바르지 않습니다.");
+            } else {
+                const whitelistSnap = await get(ref(db, `system/whitelist/${id}`));
+                if (whitelistSnap.exists()) {
+                    await set(ref(db, `users/${id}`), { pw: pw, role: "user" });
+                    alert(`환영합니다! 지금 입력하신 비밀번호로 [${id}]님의 계정이 생성(등록)되었습니다.`);
+                    processLoginAction(id, false);
+                } else alert("사전 등록된 명단에 없습니다. 관리자에게 문의하세요.");
+            }
+        } catch (error) { console.error(error); alert("서버 연결 실패."); }
+    });
+
+    function switchScreen(target) {
+        Object.values(screens).forEach(s => s.classList.add('hidden'));
+        screens[target].classList.remove('hidden');
+    }
+
+    // 모드 토글 (버튼 색상 변경 포함)
+    document.getElementById('btn-mode').addEventListener('click', (e) => {
+        if (currentMode === "본인") {
+            currentMode = "크루";
+            e.target.innerText = `현재 모드: 크루 (파란색)`;
+            e.target.className = 'btn btn-mode-crew';
+        } else {
+            currentMode = "본인";
+            e.target.innerText = `현재 모드: 본인 (초록색)`;
+            e.target.className = 'btn btn-mode-self';
+        }
+    });
+
+    const logoutAction = () => { 
+        currentUser = null; isAdmin = false; 
+        localStorage.removeItem('PUS_currentUser'); localStorage.removeItem('PUS_isAdmin');
+        location.reload(); 
+    };
+    document.getElementById('btn-logout').addEventListener('click', logoutAction);
+    document.getElementById('btn-admin-logout').addEventListener('click', logoutAction);
+
+    // =====================================
+    // 번호판 렌더링 및 조작
+    // =====================================
+    function renderGrid(gridElement, totalNumbers, disabledNumbers, numbers, isAdminView) {
+        gridElement.innerHTML = '';
+        for (let i = 1; i <= totalNumbers; i++) {
+            const box = document.createElement('div');
+            box.className = 'number-box';
+            box.innerText = i;
+            
+            if (disabledNumbers[i]) {
+                box.classList.add('disabled');
+                box.innerHTML += `<div class="name-tag">사용제한</div>`;
+            } else if (numbers[i]) {
+                const isCrew = numbers[i].includes('(크루)');
+                box.classList.add(isCrew ? 'occupied-crew' : 'occupied-self');
+                box.innerHTML += `<div class="name-tag">${numbers[i]}</div>`;
+                
+                if (isAdminView) box.onclick = () => adminForceClear(i, numbers[i]);
+                else box.onclick = () => toggleNumber(i, numbers[i], true);
+            } else {
+                if (!isAdminView) box.onclick = () => toggleNumber(i, null, false);
+            }
+            gridElement.appendChild(box);
+        }
+    }
+
+    function listenToBoard() {
+        const grid = document.getElementById('number-grid');
+        onValue(ref(db, "system"), (snapshot) => {
+            if (!snapshot.exists()) return;
+            const data = snapshot.val();
+            const total = (data.config && data.config.totalNumbers) || 20;
+            const disabled = (data.config && data.config.disabledNumbers) || {};
+            const occupied = (data.boardState && data.boardState.numbers) || {};
+            renderGrid(grid, total, disabled, occupied, false);
+        });
+    }
+
+    async function toggleNumber(num, currentOccupant, isOccupied) {
+        const boardStateRef = ref(db, "system/boardState");
+        const snap = await get(boardStateRef);
+        if (!snap.exists()) return;
+        
+        let data = snap.val();
+        if (!data.numbers) data.numbers = {};
+        const timeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+
+        if (isOccupied) {
+            if (currentMode === "본인" && !currentOccupant.includes(currentUser)) return alert("본인 모드에서는 본인의 번호판만 반납할 수 있습니다.");
+            delete data.numbers[num];
+            await push(ref(db, "system/boardState/log"), { time: timeStr, num: num, action: "반납", user: currentOccupant.split('(')[0] });
+            await update(boardStateRef, { numbers: data.numbers });
+        } else {
+            const existEntry = Object.entries(data.numbers).find(([k, v]) => v && v.includes(currentUser));
+            if(existEntry && currentMode === "본인") {
+                if(!confirm(`이미 ${existEntry[0]}번을 선택 중입니다. 이동하시겠습니까?`)) return;
+                delete data.numbers[existEntry[0]];
+            }
+            const displayName = currentMode === "크루" ? `${currentUser}(크루)` : currentUser;
+            data.numbers[num] = displayName;
+            await push(ref(db, "system/boardState/log"), { time: timeStr, num: num, action: "선택", user: displayName });
+            await update(boardStateRef, { numbers: data.numbers });
+        }
+    }
+
+    // 일반 사용자 - 내 번호 전체 반납
+    document.getElementById('btn-return-all').addEventListener('click', async () => {
+        const boardStateRef = ref(db, "system/boardState");
+        const snap = await get(boardStateRef);
+        if (!snap.exists()) return;
+
+        let data = snap.val();
+        if (!data.numbers) return alert("현재 사용 중인 번호가 없습니다.");
+
+        let hasChanged = false;
+        const timeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+
+        Object.entries(data.numbers).forEach(([num, name]) => {
+            if (name.includes(currentUser)) {
+                delete data.numbers[num];
+                push(ref(db, "system/boardState/log"), { time: timeStr, num: num, action: "전체반납", user: name.split('(')[0] });
+                hasChanged = true;
+            }
+        });
+
+        if (hasChanged) {
+            await update(boardStateRef, { numbers: data.numbers });
+            alert("내 이름이 들어간 모든 번호가 반납되었습니다.");
+        } else alert("반납할 내 번호가 없습니다.");
+    });
+
+    // =====================================
+    // 관리자 모드 로직
+    // =====================================
+    function listenToAdminBoard() {
+        const adminGrid = document.getElementById('admin-number-grid');
+        onValue(ref(db, "system"), (snapshot) => {
+            if (!snapshot.exists()) return;
+            const data = snapshot.val();
+            const total = (data.config && data.config.totalNumbers) || 20;
+            const disabled = (data.config && data.config.disabledNumbers) || {};
+            const occupied = (data.boardState && data.boardState.numbers) || {};
+            renderGrid(adminGrid, total, disabled, occupied, true);
+        });
+    }
+
+    async function adminForceClear(num, currentOccupant) {
+        if(!confirm(`[${currentOccupant}] 님이 사용 중인 ${num}번을 강제로 반납(취소)하시겠습니까?`)) return;
+        const boardStateRef = ref(db, "system/boardState");
+        const snap = await get(boardStateRef);
+        if (!snap.exists()) return;
+
+        let data = snap.val();
+        if(data.numbers && data.numbers[num]) {
+            delete data.numbers[num];
+            const timeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+            await push(ref(db, "system/boardState/log"), { time: timeStr, num: num, action: "관리자강제취소", user: currentOccupant.split('(')[0] });
+            await update(boardStateRef, { numbers: data.numbers });
+        }
+    }
+
+    document.getElementById('btn-admin-reset-all').addEventListener('click', async () => {
+        if(!confirm("현재 선택된 모든 사람들의 번호를 강제로 초기화(전체 반납) 하시겠습니까?")) return;
+        const boardStateRef = ref(db, "system/boardState");
+        const snap = await get(boardStateRef);
+        if (!snap.exists()) return;
+
+        let data = snap.val();
+        if (!data.numbers || Object.keys(data.numbers).length === 0) return alert("비울 번호가 없습니다.");
+
+        const timeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+        Object.entries(data.numbers).forEach(([num, name]) => {
+            push(ref(db, "system/boardState/log"), { time: timeStr, num: num, action: "관리자전체강제취소", user: name.split('(')[0] });
+        });
+        await update(boardStateRef, { numbers: {} });
+        alert("모든 번호판이 성공적으로 초기화되었습니다.");
+    });
+
+    document.getElementById('btn-toggle-admin-board').addEventListener('click', () => {
+        document.getElementById('admin-board-popup').classList.toggle('hidden');
+    });
+
+    // =====================================
+    // 명단 및 비밀번호 초기화 로직 (변경됨)
+    // =====================================
+    document.getElementById('btn-user-reset-req').addEventListener('click', async () => {
+        const id = document.getElementById('login-id').value.trim();
+        if(!id) return alert("ID(이름) 칸에 본인 이름을 먼저 적고 [비밀번호 초기화 요청]을 눌러주세요.");
+        await set(ref(db, `system/resetRequests/${id}`), true);
+        alert(`[${id}]님의 비밀번호 초기화를 관리자에게 요청했습니다.`);
+    });
+
+    function listenToResetRequests() {
+        onValue(ref(db, "system/resetRequests"), (snap) => {
+            const badge = document.getElementById('reset-badge');
+            if (snap.exists()) {
+                pendingResets = Object.keys(snap.val());
+                if (pendingResets.length > 0) { badge.innerText = pendingResets.length; badge.style.display = 'inline-block'; }
+                else badge.style.display = 'none';
+            } else { pendingResets = []; badge.style.display = 'none'; }
+        });
+    }
+
+    const whitelistTitle = document.getElementById('admin-whitelist-title');
+    const whitelistDropdown = document.getElementById('whitelist-dropdown');
+    whitelistTitle.addEventListener('click', () => { whitelistDropdown.classList.toggle('hidden'); renderWhitelist(); });
+    document.addEventListener('click', (e) => { if(!whitelistTitle.contains(e.target) && !whitelistDropdown.contains(e.target)) whitelistDropdown.classList.add('hidden'); });
+
+    async function renderWhitelist() {
+        const content = document.getElementById('whitelist-content');
+        content.innerHTML = '불러오는 중...';
+        const snap = await get(ref(db, "system/whitelist"));
+        if(snap.exists()) {
+            const names = Object.keys(snap.val());
+            content.innerHTML = names.map(name => `<div class="whitelist-item">- ${name}</div>`).join('');
+        } else content.innerHTML = '등록된 명단이 없습니다.';
+    }
+
+    document.getElementById('btn-add-user').addEventListener('click', async () => {
+        const id = document.getElementById('admin-target-user').value.trim();
+        if(!id) return alert("직원 이름을 입력하세요.");
+        await set(ref(db, `system/whitelist/${id}`), true);
+        alert(`[${id}]님이 명단에 등록되었습니다.`);
+        document.getElementById('admin-target-user').value = ''; renderWhitelist();
+    });
+
+    document.getElementById('btn-delete-user').addEventListener('click', async () => {
+        const id = document.getElementById('admin-target-user').value.trim();
+        if(!id) return alert("삭제할 직원 이름을 입력하세요.");
+        if(confirm(`[${id}]님의 계정을 완전히 삭제하시겠습니까?`)) {
+            await remove(ref(db, `system/whitelist/${id}`)); await remove(ref(db, `users/${id}`));
+            alert(`[${id}] 계정이 삭제되었습니다.`);
+            document.getElementById('admin-target-user').value = ''; renderWhitelist();
+        }
+    });
+
+    // ✅ 비밀번호 초기화 버튼 로직 수정
+    document.getElementById('btn-reset-pw').addEventListener('click', async () => {
+        const id = document.getElementById('admin-target-user').value.trim();
+        if(!id) {
+            if (pendingResets.length > 0) return alert(`[현재 초기화 요청 대기자]\n- ${pendingResets.join('\n- ')}\n\n입력창에 이름을 적고 버튼을 누르시면 초기화됩니다.`);
+            return alert("초기화할 직원 이름을 입력하세요.");
+        }
+        
+        // 유저 데이터 삭제하되 명단(whitelist)엔 남겨두어 다음 로그인 때 새 비밀번호 등록 유도
+        const userSnap = await get(ref(db, `users/${id}`));
+        const whitelistSnap = await get(ref(db, `system/whitelist/${id}`));
+        
+        if(userSnap.exists() || whitelistSnap.exists()) {
+            await remove(ref(db, `users/${id}`)); // 기존 비밀번호 삭제
+            await set(ref(db, `system/whitelist/${id}`), true); // 명단 유지
+            await remove(ref(db, `system/resetRequests/${id}`)); // 알림 삭제
+            
+            alert(`[${id}]님의 비밀번호가 초기화되었습니다.\n다시 로그인할 때 입력하는 새로운 비밀번호가 계정 비밀번호로 확정됩니다.`);
+            document.getElementById('admin-target-user').value = '';
+        } else {
+            alert(`[${id}]님은 등록된 명단에 없습니다.`);
+        }
+    });
+
+    document.getElementById('btn-update-nums').addEventListener('click', async () => {
+        const total = parseInt(document.getElementById('admin-total-nums').value);
+        if(!total || total < 1) return;
+        await update(ref(db, "system/config"), { totalNumbers: total });
+    });
+
+    document.getElementById('btn-toggle-disable').addEventListener('click', async () => {
+        const num = parseInt(document.getElementById('admin-disable-num').value);
+        if(!num) return;
+        const configRef = ref(db, "system/config");
+        const snap = await get(configRef);
+        let disables = snap.exists() ? (snap.val().disabledNumbers || {}) : {};
+        if (disables[num]) delete disables[num]; else disables[num] = true;
+        await update(configRef, { disabledNumbers: disables });
+    });
+
+    document.getElementById('btn-send-alarm').addEventListener('click', async () => {
+        await set(ref(db, "system/alarm"), { timestamp: Date.now() });
+        alert("미반납자 전체에게 알람이 전송되었습니다.");
+    });
+
+    function listenToAlarms() {
+        onValue(ref(db, "system/alarm"), async (snap) => {
+            if (snap.exists()) {
+                const alarmData = snap.val();
+                if (Date.now() - alarmData.timestamp < 5000) {
+                    const stateSnap = await get(ref(db, "system/boardState"));
+                    const numbers = stateSnap.exists() ? (stateSnap.val().numbers || {}) : {};
+                    const isMyNameLeft = Object.values(numbers).some(name => name && name.includes(currentUser));
+                    if (isMyNameLeft) {
+                        alert("⚠️ [관리자 경고] 일과 종료! 번호를 즉시 반납해 주세요!");
+                        if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+                    }
+                }
+            }
+        });
+    }
+
+    document.getElementById('btn-export-excel').addEventListener('click', async () => {
+        try {
+            const targetDate = document.getElementById('export-date').value;
+            if(!targetDate) return alert("다운로드할 날짜를 선택해주세요.");
+
+            let excelData = []; let logData = {};
+            if(targetDate === todayString) {
+                const todaySnap = await get(ref(db, "system/boardState"));
+                if(todaySnap.exists() && todaySnap.val().log) logData = todaySnap.val().log;
+            } else {
+                const historySnap = await get(ref(db, `history/${targetDate}`));
+                if(historySnap.exists() && historySnap.val().log) logData = historySnap.val().log;
+            }
+
+            const logEntries = Object.values(logData);
+            if(logEntries.length === 0) return alert(`${targetDate} 일자의 기록이 존재하지 않습니다.`);
+
+            logEntries.forEach(log => { excelData.push({ '날짜': targetDate, '시간': log.time, '작업': log.action, '직원명': log.user, '번호': log.num }); });
+            const worksheet = XLSX.utils.json_to_sheet(excelData); const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "사용기록"); XLSX.writeFile(workbook, `번호판기록_${targetDate}.xlsx`);
+        } catch (error) { console.error(error); alert("엑셀 추출 중 오류가 발생했습니다."); }
+    });
+</script>
+</body>
+</html>
