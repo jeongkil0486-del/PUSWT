@@ -133,11 +133,12 @@
                 </div>
                 <input type="text" id="admin-target-user" class="input-field" placeholder="직원 이름 입력" style="margin-top: 10px;">
                 <div class="action-group">
-                    <button id="btn-add-user" class="btn btn-primary">명단 생성</button>
-                    <button id="btn-delete-user" class="btn btn-danger">계정 삭제</button>
+                    <button id="btn-add-user" class="btn btn-primary">생성</button>
+                    <button id="btn-delete-user" class="btn btn-danger">삭제</button>
                     <button id="btn-reset-pw" class="btn btn-warning" style="position: relative;">
-                        PW 초기화 <span id="reset-badge" class="badge"></span>
+                        초기화 <span id="reset-badge" class="badge"></span>
                     </button>
+                    <button id="btn-reset-all-pw" class="btn btn-danger" style="background-color:#ff9500;">전체초기화</button>
                 </div>
             </div>
 
@@ -315,19 +316,29 @@
 
         try {
             await checkDailyReset(false);
-            const userSnap = await get(ref(db, `users/${id}`));
-            if (userSnap.exists()) {
-                if (userSnap.val().pw === pw) processLoginAction(id, false);
-                else alert("비밀번호가 올바르지 않습니다.");
+            const [userSnap, whitelistSnap] = await Promise.all([
+                get(ref(db, `users/${id}`)),
+                get(ref(db, `system/whitelist/${id}`))
+            ]);
+
+            const isWhitelisted = whitelistSnap.exists();
+            const existingPw = userSnap.exists() ? userSnap.val().pw : null;
+
+            if (!isWhitelisted && !existingPw) {
+                // 명단에도 없고 계정도 없음
+                return alert("사전 등록된 명단에 없습니다. 관리자에게 문의하세요.");
+            }
+
+            if (!existingPw) {
+                // 명단은 있지만 아직 비밀번호 미설정(신규 or 초기화된 계정) → 첫 로그인
+                await set(ref(db, `users/${id}`), { pw: pw, role: "user" });
+                alert(`환영합니다! 지금 입력하신 비밀번호로 계정이 확정되었습니다.`);
+                processLoginAction(id, false);
+            } else if (existingPw === pw) {
+                // 기존 비밀번호 일치 → 로그인
+                processLoginAction(id, false);
             } else {
-                const whitelistSnap = await get(ref(db, `system/whitelist/${id}`));
-                if (whitelistSnap.exists()) {
-                    await set(ref(db, `users/${id}`), { pw: pw, role: "user" });
-                    alert(`환영합니다! 지금 입력하신 비밀번호로 계정이 확정되었습니다.`);
-                    processLoginAction(id, false);
-                } else {
-                    alert("사전 등록된 명단에 없습니다. 관리자에게 문의하세요.");
-                }
+                alert("비밀번호가 올바르지 않습니다.");
             }
         } catch (error) {
             console.error(error);
@@ -732,6 +743,22 @@
             console.error("알림 끄기 실패:", e);
         }
     };
+
+    // 전체 PW 초기화 버튼 (관리자)
+    document.getElementById('btn-reset-all-pw').addEventListener('click', async () => {
+        if (!confirm("모든 직원의 비밀번호를 초기화하시겠습니까?\n(각 직원이 다음 로그인 시 새 비밀번호를 설정하게 됩니다)")) return;
+        try {
+            const whitelistSnap = await get(ref(db, "system/whitelist"));
+            if (!whitelistSnap.exists()) return alert("등록된 직원 명단이 없습니다.");
+            const names = Object.keys(whitelistSnap.val());
+            const tasks = names.map(name => remove(ref(db, `users/${name}`)));
+            await Promise.all(tasks);
+            alert(`총 ${names.length}명의 비밀번호가 전체 초기화되었습니다.`);
+        } catch (e) {
+            console.error("전체 PW 초기화 오류:", e);
+            alert("초기화 실패. 다시 시도해주세요.");
+        }
+    });
 
     // 전체 끄기 버튼
     document.getElementById('btn-dismiss-alarm').addEventListener('click', async () => {
