@@ -27,6 +27,8 @@
         .btn-warning { background-color: #ffcc00; color: #333; }
         .btn-mode-self { background-color: #34c759; color: white; }
         .btn-mode-crew { background-color: #007aff; color: white; }
+        .btn-mode-charge { background-color: #ff9500; color: white; }
+        .number-box.occupied-charge { background-color: #ff9500; color: white; border-color: #ff9500; }
 
         .badge { position: absolute; top: -6px; right: -6px; background-color: #ff3b30; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: bold; display: none; }
 
@@ -106,7 +108,11 @@
                         <button id="btn-return-all" class="btn btn-danger" style="padding: 8px 12px;">초기화</button>
                     </div>
                 </div>
-                <button id="btn-mode" class="btn btn-mode-self" style="width: 100%; padding: 12px; font-size: 16px;">현재 모드: 본인 (초록색)</button>
+                <div style="display: flex; gap: 8px;">
+                    <button id="btn-mode-self" class="btn btn-mode-self" style="flex: 1; padding: 12px 4px; font-size: 14px;">본인</button>
+                    <button id="btn-mode-crew" class="btn btn-secondary" style="flex: 1; padding: 12px 4px; font-size: 14px;">크루</button>
+                    <button id="btn-mode-charge" class="btn btn-secondary" style="flex: 1; padding: 12px 4px; font-size: 14px;">충전중</button>
+                </div>
             </div>
             <!-- 직원용 호출 알림 배너 (읽기 전용, 끄기 불가) -->
             <div id="user-incoming-alarm" class="hidden" style="margin-bottom: 14px; border-radius: 8px; overflow: hidden; border: 1px solid #ff3b30;">
@@ -351,18 +357,22 @@
         screens[target].classList.remove('hidden');
     }
 
-    // 모드 토글
-    document.getElementById('btn-mode').addEventListener('click', (e) => {
-        if (currentMode === "본인") {
-            currentMode = "크루";
-            e.target.innerText = `현재 모드: 크루 (파란색)`;
-            e.target.className = 'btn btn-mode-crew';
-        } else {
-            currentMode = "본인";
-            e.target.innerText = `현재 모드: 본인 (초록색)`;
-            e.target.className = 'btn btn-mode-self';
-        }
-    });
+    // 모드 3버튼
+    function setMode(mode) {
+        currentMode = mode;
+        const btnSelf   = document.getElementById('btn-mode-self');
+        const btnCrew   = document.getElementById('btn-mode-crew');
+        const btnCharge = document.getElementById('btn-mode-charge');
+        btnSelf.className   = 'btn ' + (mode === '본인'   ? 'btn-mode-self'   : 'btn-secondary');
+        btnCrew.className   = 'btn ' + (mode === '크루'   ? 'btn-mode-crew'   : 'btn-secondary');
+        btnCharge.className = 'btn ' + (mode === '충전중' ? 'btn-mode-charge' : 'btn-secondary');
+        [btnSelf, btnCrew, btnCharge].forEach(b => {
+            b.style.flex = '1'; b.style.padding = '12px 4px'; b.style.fontSize = '14px';
+        });
+    }
+    document.getElementById('btn-mode-self').addEventListener('click',   () => setMode('본인'));
+    document.getElementById('btn-mode-crew').addEventListener('click',   () => setMode('크루'));
+    document.getElementById('btn-mode-charge').addEventListener('click', () => setMode('충전중'));
 
     // 수정 모드 토글
     document.getElementById('btn-edit-mode').addEventListener('click', (e) => {
@@ -416,9 +426,15 @@
                 box.classList.add('disabled');
                 box.innerHTML += `<div class="name-tag">사용제한</div>`;
             } else if (numbers[i]) {
+                const isCharge = numbers[i].includes('(충전중)');
                 const isCrew = numbers[i].includes('(크루)');
-                box.classList.add(isCrew ? 'occupied-crew' : 'occupied-self');
-                box.innerHTML += `<div class="name-tag">${numbers[i]}</div>`;
+                if (isCharge) {
+                    box.classList.add('occupied-charge');
+                    box.innerHTML += `<div class="name-tag">충전중</div>`;
+                } else {
+                    box.classList.add(isCrew ? 'occupied-crew' : 'occupied-self');
+                    box.innerHTML += `<div class="name-tag">${numbers[i]}</div>`;
+                }
 
                 if (isAdminView) {
                     box.onclick = () => adminForceClear(i, numbers[i]);
@@ -517,7 +533,7 @@
 
         try {
             const timeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false });
-            const displayName = currentMode === "크루" ? `${currentUser}(크루)` : currentUser;
+            const displayName = currentMode === "크루" ? `${currentUser}(크루)` : currentMode === "충전중" ? `${currentUser}(충전중)` : currentUser;
             const logRef = ref(db, "system/boardState/log");
 
             // ── 수정(뺏기) 모드 ──
@@ -598,13 +614,14 @@
                 }
 
             } else {
-                // 크루 모드: 개수 제한 없이 추가 선택 (트랜잭션으로 충돌 방지)
+                // 크루/충전중 모드: 개수 제한 없이 추가 선택 (트랜잭션으로 충돌 방지)
+                const actionLabel = currentMode === "충전중" ? "선택(충전중)" : "선택(크루)";
                 const res = await runTransaction(ref(db, `system/boardState/numbers/${num}`), (currentData) => {
                     if (currentData === null) return displayName;
                     return;
                 });
                 if (res.committed) {
-                    await push(logRef, { time: timeStr, num: num, action: "선택(크루)", user: displayName });
+                    await push(logRef, { time: timeStr, num: num, action: actionLabel, user: displayName });
                 } else {
                     alert("간발의 차이로 다른 사람이 먼저 번호를 선택했습니다.");
                 }
@@ -632,7 +649,7 @@
 
             const tasks = [];
             Object.entries(numbers).forEach(([num, name]) => {
-                if (name && name.includes(currentUser)) {
+                if (name && (name === currentUser || name === `${currentUser}(크루)` || name === `${currentUser}(충전중)`)) {
                     tasks.push(
                         remove(ref(db, `system/boardState/numbers/${num}`)).then(() =>
                             push(ref(db, "system/boardState/log"), {
