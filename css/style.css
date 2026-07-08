@@ -148,8 +148,8 @@ header {
     align-items: center;
     justify-content: center;
     border-radius: var(--login-control-radius);
-    background: linear-gradient(135deg, #0b2f7a, #1760da);
-    border: 1px solid rgba(122, 191, 255, 0.55);
+    background: linear-gradient(135deg, #d62828, #ff5a36);
+    border: 2px solid rgba(255, 244, 133, 0.9);
     color: white;
     font-size: 17px;
     line-height: normal;
@@ -642,7 +642,7 @@ button {
     font-family: "Segoe UI", "Arial", sans-serif;
     font-size: 58px;
     line-height: 0.92;
-    color: #ffffff;
+    color: #23c552;
     letter-spacing: 0.12em;
     font-weight: 900;
     text-indent: 0.14em;
@@ -666,7 +666,7 @@ button {
     margin-top: 2px;
     padding: 16px 18px 14px;
     border-radius: 24px;
-    background: rgba(255, 255, 255, 0.94);
+    background: rgba(255, 240, 120, 0.96);
     border: 1px solid rgba(255, 255, 255, 0.78);
     box-shadow: 0 22px 40px rgba(6, 20, 54, 0.22);
     backdrop-filter: blur(14px);
