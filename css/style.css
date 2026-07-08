@@ -14,9 +14,8 @@ body {
     --login-control-radius: 16px;
     --login-control-border: 1px;
     --login-control-side-padding: 20px;
-    --login-control-text-start: 52px;
-    --login-control-right-space: 52px;
     --login-control-icon-size: 20px;
+    --login-control-slot-width: 32px;
 }
 
 * {
@@ -144,11 +143,14 @@ header {
     margin-top: 8px;
     height: var(--login-control-height);
     padding: 0 var(--login-control-side-padding);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border-radius: var(--login-control-radius);
     background: linear-gradient(135deg, #0b2a6f, #103f98);
     color: white;
     font-size: 17px;
-    line-height: 1;
+    line-height: normal;
     letter-spacing: 0.02em;
     box-shadow: 0 14px 28px rgba(11, 42, 111, 0.24);
 }
@@ -188,6 +190,12 @@ header {
     background-color: #fafcff;
     color: #22304d;
     vertical-align: middle;
+}
+
+input,
+select,
+button {
+    font: inherit;
 }
 
 .input-field:focus {
@@ -674,79 +682,93 @@ header {
     font-weight: 700;
 }
 
-.select-shell,
-.input-shell {
-    position: relative;
+.control-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: var(--login-control-height);
+    padding: 0 var(--login-control-side-padding);
+    border: var(--login-control-border) solid #d8def0;
+    border-radius: var(--login-control-radius);
+    background: #ffffff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.input-select {
+.control-row:focus-within {
+    border-color: #2f71ff;
+    box-shadow: 0 0 0 4px rgba(47, 113, 255, 0.12);
+}
+
+.control-leading,
+.control-trailing {
+    width: var(--login-control-slot-width);
+    min-width: var(--login-control-slot-width);
+    height: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #7c88a5;
+    flex-shrink: 0;
+}
+
+.control-leading svg,
+.control-trailing svg {
+    width: var(--login-control-icon-size);
+    height: var(--login-control-icon-size);
+    display: block;
+}
+
+.control-leading-blank {
+    color: transparent;
+}
+
+.control-input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: #22304d;
+    font-size: 16px;
+    line-height: normal;
+}
+
+.control-input::placeholder {
+    color: #7f8ba7;
+    opacity: 1;
+}
+
+.control-select {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    height: var(--login-control-height);
-    padding-left: var(--login-control-side-padding);
-    padding-right: var(--login-control-right-space);
-    background: #ffffff;
-    line-height: calc(var(--login-control-height) - (var(--login-control-border) * 2));
+    cursor: pointer;
+    text-align: left;
+    text-align-last: left;
 }
 
-.select-chevron {
-    position: absolute;
-    top: 50%;
-    right: var(--login-control-side-padding);
-    transform: translateY(-50%);
-    width: var(--login-control-icon-size);
-    height: var(--login-control-icon-size);
+.control-select::-ms-expand {
+    display: none;
+}
+
+.control-chevron {
     color: #4b5f8b;
     pointer-events: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
-.select-chevron svg,
-.input-icon svg,
-.password-toggle svg {
-    width: 100%;
-    height: 100%;
-}
-
-.input-shell .input-field {
-    margin: 0;
-    padding-left: var(--login-control-text-start);
-    padding-right: var(--login-control-right-space);
-    background: #ffffff;
-}
-
-.input-shell .login-input {
-    height: var(--login-control-height);
-    border-radius: var(--login-control-radius);
-}
-
-.input-icon,
-.password-toggle {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #7c88a5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.input-icon {
-    left: var(--login-control-side-padding);
-    width: var(--login-control-icon-size);
-    height: var(--login-control-icon-size);
+.control-trailing-blank {
+    visibility: hidden;
 }
 
 .password-toggle {
-    right: var(--login-control-side-padding);
-    width: var(--login-control-icon-size);
-    height: var(--login-control-icon-size);
-    background: transparent;
-    border: none;
     padding: 0;
+    border: 0;
+    background: transparent;
     cursor: pointer;
 }
 
@@ -778,9 +800,8 @@ header {
     :root {
         --login-control-height: 48px;
         --login-control-side-padding: 18px;
-        --login-control-text-start: 48px;
-        --login-control-right-space: 48px;
         --login-control-icon-size: 18px;
+        --login-control-slot-width: 30px;
     }
 
     .login-screen {
@@ -818,8 +839,7 @@ header {
         margin-top: 6px;
     }
 
-    .input-shell .login-input,
-    .input-select {
+    .control-input {
         font-size: 15px;
     }
 
