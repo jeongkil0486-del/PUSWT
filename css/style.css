@@ -9,6 +9,16 @@ body {
     -webkit-tap-highlight-color: transparent;
 }
 
+:root {
+    --login-control-height: 54px;
+    --login-control-radius: 16px;
+    --login-control-border: 1px;
+    --login-control-side-padding: 20px;
+    --login-control-text-start: 52px;
+    --login-control-right-space: 52px;
+    --login-control-icon-size: 20px;
+}
+
 * {
     box-sizing: border-box;
 }
@@ -132,11 +142,13 @@ header {
 .btn-login-primary {
     width: 100%;
     margin-top: 8px;
-    padding: 15px 20px;
-    border-radius: 999px;
+    height: var(--login-control-height);
+    padding: 0 var(--login-control-side-padding);
+    border-radius: var(--login-control-radius);
     background: linear-gradient(135deg, #0b2a6f, #103f98);
     color: white;
     font-size: 17px;
+    line-height: 1;
     letter-spacing: 0.02em;
     box-shadow: 0 14px 28px rgba(11, 42, 111, 0.24);
 }
@@ -166,14 +178,16 @@ header {
 
 .input-field {
     width: 100%;
-    padding: 14px 16px;
+    height: var(--login-control-height);
+    padding: 0 var(--login-control-side-padding);
     margin: 8px 0;
-    border: 1px solid #d8def0;
-    border-radius: 14px;
+    border: var(--login-control-border) solid #d8def0;
+    border-radius: var(--login-control-radius);
     font-size: 16px;
-    line-height: 1.2;
+    line-height: 1;
     background-color: #fafcff;
     color: #22304d;
+    vertical-align: middle;
 }
 
 .input-field:focus {
@@ -667,20 +681,27 @@ header {
 
 .input-select {
     appearance: none;
-    height: 54px;
-    padding-right: 54px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    height: var(--login-control-height);
+    padding-left: var(--login-control-side-padding);
+    padding-right: var(--login-control-right-space);
     background: #ffffff;
+    line-height: calc(var(--login-control-height) - (var(--login-control-border) * 2));
 }
 
 .select-chevron {
     position: absolute;
     top: 50%;
-    right: 18px;
+    right: var(--login-control-side-padding);
     transform: translateY(-50%);
-    width: 20px;
-    height: 20px;
+    width: var(--login-control-icon-size);
+    height: var(--login-control-icon-size);
     color: #4b5f8b;
     pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .select-chevron svg,
@@ -692,16 +713,14 @@ header {
 
 .input-shell .input-field {
     margin: 0;
-    padding-left: 54px;
-    padding-right: 54px;
+    padding-left: var(--login-control-text-start);
+    padding-right: var(--login-control-right-space);
     background: #ffffff;
-    display: flex;
-    align-items: center;
 }
 
 .input-shell .login-input {
-    height: 54px;
-    border-radius: 16px;
+    height: var(--login-control-height);
+    border-radius: var(--login-control-radius);
 }
 
 .input-icon,
@@ -710,18 +729,21 @@ header {
     top: 50%;
     transform: translateY(-50%);
     color: #7c88a5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .input-icon {
-    left: 18px;
-    width: 24px;
-    height: 24px;
+    left: var(--login-control-side-padding);
+    width: var(--login-control-icon-size);
+    height: var(--login-control-icon-size);
 }
 
 .password-toggle {
-    right: 16px;
-    width: 28px;
-    height: 28px;
+    right: var(--login-control-side-padding);
+    width: var(--login-control-icon-size);
+    height: var(--login-control-icon-size);
     background: transparent;
     border: none;
     padding: 0;
@@ -753,6 +775,14 @@ header {
 }
 
 @media (max-width: 480px) {
+    :root {
+        --login-control-height: 48px;
+        --login-control-side-padding: 18px;
+        --login-control-text-start: 48px;
+        --login-control-right-space: 48px;
+        --login-control-icon-size: 18px;
+    }
+
     .login-screen {
         padding: 12px 14px 12px;
         gap: 12px;
@@ -790,12 +820,10 @@ header {
 
     .input-shell .login-input,
     .input-select {
-        height: 48px;
         font-size: 15px;
     }
 
     .btn-login-primary {
-        padding: 13px 18px;
         font-size: 15px;
     }
 
