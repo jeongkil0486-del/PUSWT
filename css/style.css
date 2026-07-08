@@ -631,15 +631,12 @@ button {
     align-items: center;
     justify-content: center;
     margin-inline: auto;
-    box-shadow: 0 16px 28px rgba(4, 20, 58, 0.28);
-    border: 1px solid rgba(255, 255, 255, 0.68);
-    background: rgba(10, 30, 80, 0.12);
 }
 
 .brand-mark img {
     display: block;
-    width: 84%;
-    height: 84%;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
     object-position: center center;
 }
@@ -725,10 +722,11 @@ button {
 
 .field-label {
     display: block;
-    margin-bottom: 7px;
+    margin-bottom: 6px;
     font-size: 12px;
     color: #223a70;
     font-weight: 700;
+    padding-left: 2px;
 }
 
 .control-row {
@@ -762,24 +760,11 @@ button {
     color: #7c88a5;
 }
 
-.control-inline-icon svg,
 .control-trailing svg {
     width: var(--login-control-icon-size);
     height: var(--login-control-icon-size);
     display: block;
     transform: none;
-}
-
-.control-inline-branch svg {
-    transform: translateY(0.5px);
-}
-
-.control-inline-user svg {
-    transform: translateY(0.5px);
-}
-
-.control-inline-lock svg {
-    transform: translateY(0.5px);
 }
 
 .control-chevron svg {
@@ -807,21 +792,11 @@ button {
     justify-content: center;
     min-width: 0;
     max-width: 100%;
-    gap: 12px;
+    gap: 0;
 }
 
 .control-content-select {
     color: #22304d;
-}
-
-.control-inline-icon {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--login-control-icon-size);
-    height: var(--login-control-icon-size);
-    color: #7c88a5;
 }
 
 .control-input {
