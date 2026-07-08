@@ -9,6 +9,12 @@ body {
     -webkit-tap-highlight-color: transparent;
 }
 
+html.login-active,
+body.login-active {
+    height: 100dvh;
+    overflow: hidden;
+}
+
 :root {
     --login-control-height: 52px;
     --login-control-radius: 17px;
@@ -537,6 +543,8 @@ button {
     overflow: hidden;
     min-height: 100vh;
     min-height: 100svh;
+    min-height: 100dvh;
+    max-height: 100dvh;
     padding: 24px 18px 18px;
     display: flex;
     flex-direction: column;

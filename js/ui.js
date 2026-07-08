@@ -35,6 +35,10 @@ function formatElapsedTime(elapsed) {
 export function switchScreen(target) {
     Object.values(screens).forEach((screen) => screen.classList.add("hidden"));
     screens[target].classList.remove("hidden");
+
+    const isLoginScreen = target === "login";
+    document.documentElement.classList.toggle("login-active", isLoginScreen);
+    document.body.classList.toggle("login-active", isLoginScreen);
 }
 
 export function updateBranchBadges() {

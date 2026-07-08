@@ -253,6 +253,7 @@ async function restoreAutoLogin() {
 async function init() {
     document.title = APP_DISPLAY_NAME;
     registerAdminGlobals();
+    switchScreen("login");
     renderBranchOptions();
     syncBranchSelection(restoreSelectedBranch());
     await ensureBranchWhitelistSeed("TAE");
