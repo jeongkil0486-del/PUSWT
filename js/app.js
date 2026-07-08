@@ -1,11 +1,13 @@
 import {
     APP_DISPLAY_NAME,
     BRANCH_OPTIONS,
+    DEFAULT_BRANCH_WHITELISTS,
     dbRef,
     get,
     getAdminAccount,
     set,
     state,
+    update,
     setCurrentBranch
 } from "./data.js";
 import {
@@ -72,6 +74,33 @@ function syncBranchSelection(branchCode) {
     updateBranchSelectionDisplay(normalized);
     saveSelectedBranch(normalized);
     updateBranchBadges();
+}
+
+async function ensureBranchWhitelistSeed(branchCode) {
+    const names = DEFAULT_BRANCH_WHITELISTS[branchCode];
+    if (!Array.isArray(names) || names.length === 0) {
+        return;
+    }
+
+    const whitelistRef = dbRef("system/whitelist", branchCode);
+
+    try {
+        const whitelistSnap = await get(whitelistRef);
+        const existing = whitelistSnap.exists() ? whitelistSnap.val() || {} : {};
+        const missingNames = names.filter((name) => !existing[name]);
+        if (missingNames.length === 0) {
+            return;
+        }
+
+        const seedData = missingNames.reduce((accumulator, name) => {
+            accumulator[name] = true;
+            return accumulator;
+        }, {});
+
+        await update(whitelistRef, seedData);
+    } catch (error) {
+        console.error(`${branchCode} whitelist seed failed:`, error);
+    }
 }
 
 function processLoginAction(id, adminFlag) {
@@ -214,6 +243,7 @@ async function init() {
     registerAdminGlobals();
     renderBranchOptions();
     syncBranchSelection(restoreSelectedBranch());
+    await ensureBranchWhitelistSeed("TAE");
     bindEvents();
     state.todayString = "";
     await restoreAutoLogin();
