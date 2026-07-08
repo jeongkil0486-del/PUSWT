@@ -8,8 +8,8 @@
     <meta name="apple-mobile-web-app-title" content="TAS Walkie-Talkie">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="application-name" content="TAS Walkie-Talkie">
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=TAS&background=0b2a6f&color=fff&size=192">
-    <link rel="icon" sizes="192x192" href="https://ui-avatars.com/api/?name=TAS&background=0b2a6f&color=fff&size=192">
+    <link rel="apple-touch-icon" href="assets/app-icon.png">
+    <link rel="icon" sizes="192x192" href="assets/app-icon.png">
     <title>TAS Walkie-Talkie</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
@@ -32,24 +32,8 @@
         </div>
 
         <div class="login-hero">
-            <div class="brand-mark" aria-hidden="true">
-                <svg viewBox="0 0 120 120" role="img" aria-label="TAS Walkie-Talkie icon">
-                    <defs>
-                        <linearGradient id="brand-ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stop-color="#41d8db"></stop>
-                            <stop offset="100%" stop-color="#245df5"></stop>
-                        </linearGradient>
-                    </defs>
-                    <rect x="8" y="8" width="104" height="104" rx="30" fill="#0d2b72"></rect>
-                    <circle cx="60" cy="60" r="38" fill="none" stroke="url(#brand-ring-gradient)" stroke-width="5"></circle>
-                    <rect x="48" y="33" width="8" height="38" rx="4" fill="#ffffff"></rect>
-                    <rect x="39" y="43" width="28" height="36" rx="10" fill="#ffffff"></rect>
-                    <rect x="44" y="53" width="18" height="6" rx="3" fill="#0d2b72"></rect>
-                    <rect x="44" y="64" width="18" height="6" rx="3" fill="#0d2b72"></rect>
-                    <path d="M74 47c7 0 13 6 13 13" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round"></path>
-                    <path d="M80 39c11 0 20 9 20 20" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.92"></path>
-                    <path d="M79 54c4 0 7 3 7 7" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round"></path>
-                </svg>
+            <div class="brand-mark">
+                <img src="assets/app-icon.png" alt="TAS Walkie-Talkie 로고">
             </div>
 
             <div class="login-brand">
@@ -59,10 +43,14 @@
             </div>
 
             <div class="wing-scene" aria-hidden="true">
+                <div class="wing-scene-haze"></div>
                 <div class="wing-scene-sun"></div>
                 <div class="wing-scene-cloud cloud-left"></div>
+                <div class="wing-scene-cloud cloud-mid"></div>
                 <div class="wing-scene-cloud cloud-right"></div>
                 <div class="wing-scene-wing"></div>
+                <div class="wing-scene-flap"></div>
+                <div class="wing-scene-engine"></div>
                 <div class="wing-scene-tail"></div>
             </div>
         </div>

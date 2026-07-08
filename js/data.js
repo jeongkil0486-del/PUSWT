@@ -16,9 +16,11 @@ export const firebaseConfig = {
 
 export const APP_DISPLAY_NAME = "TAS Walkie-Talkie";
 export const DEFAULT_BRANCH = "PUS";
-export const ADMIN_ACCOUNT = {
-    id: "PUSWT",
-    password: "PUSWT"
+export const ADMIN_ACCOUNTS = {
+    PUS: { id: "PUSWT", password: "PUSWT" },
+    TAE: { id: "TAEWT", password: "TAEWT" },
+    CJJ: { id: "CJJWT", password: "CJJWT" },
+    GMP: { id: "GMPWT", password: "GMPWT" }
 };
 
 export const BRANCH_OPTIONS = [
@@ -60,6 +62,11 @@ export function normalizeBranch(branchCode) {
 export function getBranchLabel(branchCode = state.currentBranch) {
     const normalized = normalizeBranch(branchCode);
     return BRANCH_OPTIONS.find((branch) => branch.code === normalized)?.label || normalized;
+}
+
+export function getAdminAccount(branchCode = state.currentBranch) {
+    const normalized = normalizeBranch(branchCode);
+    return ADMIN_ACCOUNTS[normalized] || ADMIN_ACCOUNTS[DEFAULT_BRANCH];
 }
 
 export function isDefaultBranch(branchCode = state.currentBranch) {

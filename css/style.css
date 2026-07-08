@@ -131,20 +131,20 @@ header {
 
 .btn-login-primary {
     width: 100%;
-    margin-top: 10px;
-    padding: 18px 20px;
+    margin-top: 8px;
+    padding: 15px 20px;
     border-radius: 999px;
     background: linear-gradient(135deg, #0b2a6f, #103f98);
     color: white;
-    font-size: 18px;
+    font-size: 17px;
     letter-spacing: 0.02em;
     box-shadow: 0 14px 28px rgba(11, 42, 111, 0.24);
 }
 
 .login-secondary-action {
     width: 100%;
-    margin-top: 14px;
-    padding: 14px 16px;
+    margin-top: 10px;
+    padding: 12px 16px;
     border-radius: 16px;
     background: rgba(11, 42, 111, 0.06);
     color: #24427d;
@@ -508,19 +508,20 @@ header {
 .login-screen {
     position: relative;
     overflow: hidden;
-    padding: 28px 24px 36px;
+    min-height: 100vh;
+    padding: 18px 22px 18px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
 }
 
 .login-screen-bg {
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(circle at top center, rgba(255, 255, 255, 0.96), rgba(245, 248, 255, 0.86) 42%, rgba(214, 223, 249, 0.95) 100%),
-        linear-gradient(180deg, #eff3ff 0%, #d7e0fb 52%, #c3cff2 100%);
+        radial-gradient(circle at top center, rgba(255, 255, 255, 0.98), rgba(245, 248, 255, 0.9) 36%, rgba(210, 221, 248, 0.96) 100%),
+        linear-gradient(180deg, #f4f7ff 0%, #dbe5fb 48%, #c4d1f1 100%);
 }
 
 .login-curve {
@@ -531,35 +532,35 @@ header {
 }
 
 .login-curve-left {
-    width: 320px;
-    height: 680px;
-    left: -210px;
-    top: 200px;
+    width: 260px;
+    height: 560px;
+    left: -180px;
+    top: 160px;
     transform: rotate(18deg);
 }
 
 .login-curve-right {
-    width: 360px;
-    height: 720px;
-    right: -250px;
-    top: 210px;
+    width: 300px;
+    height: 620px;
+    right: -210px;
+    top: 170px;
     transform: rotate(-18deg);
 }
 
 .login-curve-bottom {
-    width: 640px;
-    height: 280px;
-    left: -80px;
-    bottom: -160px;
+    width: 600px;
+    height: 220px;
+    left: -60px;
+    bottom: -130px;
     opacity: 0.78;
 }
 
 .login-glow {
     position: absolute;
     left: 50%;
-    bottom: 250px;
-    width: 320px;
-    height: 120px;
+    bottom: 210px;
+    width: 300px;
+    height: 96px;
     transform: translateX(-50%);
     background: radial-gradient(circle, rgba(255, 195, 100, 0.42), rgba(255, 195, 100, 0));
 }
@@ -577,31 +578,32 @@ header {
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding-top: 14px;
+    padding-top: 4px;
 }
 
 .brand-mark {
-    width: 132px;
-    height: 132px;
-    border-radius: 34px;
+    width: 104px;
+    height: 104px;
+    border-radius: 28px;
     overflow: hidden;
     box-shadow: 0 18px 32px rgba(13, 43, 114, 0.18);
 }
 
-.brand-mark svg {
+.brand-mark img {
     display: block;
     width: 100%;
     height: 100%;
+    object-fit: cover;
 }
 
 .login-brand {
-    margin-top: 20px;
+    margin-top: 12px;
 }
 
 .brand-eyebrow {
-    margin-bottom: 10px;
+    margin-bottom: 6px;
     color: #4b5e8c;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -609,7 +611,7 @@ header {
 
 .login-brand h1 {
     margin: 0;
-    font-size: 72px;
+    font-size: 60px;
     line-height: 0.95;
     color: #0c2f7d;
     letter-spacing: 0.02em;
@@ -617,8 +619,8 @@ header {
 }
 
 .login-brand p {
-    margin: 6px 0 0;
-    font-size: 28px;
+    margin: 2px 0 0;
+    font-size: 24px;
     color: #173b87;
     letter-spacing: 0.02em;
 }
@@ -626,80 +628,130 @@ header {
 .wing-scene {
     position: relative;
     width: 100%;
-    height: 260px;
-    margin-top: 18px;
+    height: 188px;
+    margin-top: 10px;
     overflow: hidden;
+    border-radius: 34px;
+}
+
+.wing-scene-haze {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(248, 251, 255, 0.2) 30%, rgba(210, 221, 244, 0.34) 100%),
+        radial-gradient(circle at 50% 88%, rgba(255, 209, 134, 0.46), rgba(255, 209, 134, 0) 35%);
 }
 
 .wing-scene-sun {
     position: absolute;
     left: 50%;
-    bottom: 90px;
-    width: 270px;
-    height: 96px;
+    bottom: 46px;
+    width: 280px;
+    height: 112px;
     transform: translateX(-50%);
-    background: radial-gradient(circle, rgba(255, 203, 128, 0.65), rgba(255, 203, 128, 0));
+    background: radial-gradient(circle, rgba(255, 212, 144, 0.86), rgba(255, 212, 144, 0) 68%);
 }
 
 .wing-scene-cloud {
     position: absolute;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.62);
-    filter: blur(1px);
+    background: rgba(255, 255, 255, 0.78);
+    filter: blur(2px);
 }
 
 .cloud-left {
-    left: -42px;
-    bottom: 20px;
-    width: 220px;
-    height: 96px;
+    left: -28px;
+    bottom: -2px;
+    width: 188px;
+    height: 74px;
+}
+
+.cloud-mid {
+    left: 118px;
+    bottom: 8px;
+    width: 160px;
+    height: 58px;
 }
 
 .cloud-right {
-    right: -56px;
-    bottom: 4px;
-    width: 240px;
-    height: 104px;
+    right: -38px;
+    bottom: -6px;
+    width: 210px;
+    height: 84px;
 }
 
 .wing-scene-wing {
     position: absolute;
-    left: -10px;
-    right: 28px;
-    bottom: 55px;
-    height: 78px;
-    background: linear-gradient(180deg, rgba(186, 206, 236, 0.98) 0%, rgba(129, 152, 189, 0.95) 100%);
-    border-radius: 18px 160px 34px 30px;
-    transform: perspective(420px) rotateX(54deg) rotate(-9deg);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 24px 24px rgba(55, 77, 122, 0.16);
+    left: -18px;
+    right: 24px;
+    bottom: 34px;
+    height: 62px;
+    background: linear-gradient(180deg, rgba(238, 244, 251, 0.98) 0%, rgba(173, 189, 212, 0.96) 48%, rgba(121, 140, 169, 0.98) 100%);
+    border-radius: 16px 180px 34px 28px;
+    transform: perspective(520px) rotateX(60deg) rotate(-8deg);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -8px 18px rgba(77, 101, 136, 0.18), 0 20px 28px rgba(46, 65, 102, 0.18);
 }
 
 .wing-scene-wing::before {
     content: "";
     position: absolute;
-    left: 32px;
-    right: 52px;
-    top: 26px;
+    left: 34px;
+    right: 48px;
+    top: 18px;
     height: 2px;
-    background: rgba(75, 104, 151, 0.28);
-    box-shadow: 0 -11px 0 rgba(255, 255, 255, 0.34), 0 11px 0 rgba(255, 255, 255, 0.18);
+    background: rgba(90, 115, 156, 0.26);
+    box-shadow: 0 10px 0 rgba(255, 255, 255, 0.38), 0 20px 0 rgba(120, 141, 172, 0.18);
+}
+
+.wing-scene-wing::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -8px;
+    height: 16px;
+    background: linear-gradient(180deg, rgba(74, 91, 125, 0.16), rgba(74, 91, 125, 0));
+    filter: blur(5px);
+}
+
+.wing-scene-flap {
+    position: absolute;
+    left: 124px;
+    right: 92px;
+    bottom: 46px;
+    height: 16px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(159, 177, 205, 0.9), rgba(109, 127, 157, 0.92));
+    transform: rotate(-8deg);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.54);
+}
+
+.wing-scene-engine {
+    position: absolute;
+    left: 196px;
+    bottom: 18px;
+    width: 68px;
+    height: 34px;
+    border-radius: 18px 18px 26px 26px;
+    background: linear-gradient(180deg, rgba(108, 122, 153, 0.98), rgba(68, 82, 112, 0.98));
+    box-shadow: inset 0 1px 0 rgba(214, 223, 242, 0.45), 0 10px 18px rgba(47, 61, 92, 0.18);
 }
 
 .wing-scene-tail {
     position: absolute;
-    right: 14px;
-    bottom: 58px;
-    width: 54px;
-    height: 84px;
-    background: linear-gradient(180deg, #244785 0%, #142a55 100%);
+    right: 18px;
+    bottom: 26px;
+    width: 44px;
+    height: 72px;
+    background: linear-gradient(180deg, #31589f 0%, #153260 100%);
     clip-path: polygon(32% 0%, 100% 0%, 74% 100%, 0% 100%);
-    opacity: 0.9;
+    opacity: 0.92;
 }
 
 .login-card {
     width: 100%;
-    margin-top: 8px;
-    padding: 26px 24px 22px;
+    margin-top: 2px;
+    padding: 20px 20px 16px;
     border-radius: 28px;
     background: rgba(255, 255, 255, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.85);
@@ -714,21 +766,21 @@ header {
 }
 
 .login-card-subtitle {
-    margin-top: 6px;
-    margin-bottom: 18px;
+    margin-top: 4px;
+    margin-bottom: 12px;
     color: #7080a4;
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.45;
 }
 
 .field-group {
-    margin-top: 14px;
+    margin-top: 10px;
 }
 
 .field-label {
     display: block;
-    margin-bottom: 8px;
-    font-size: 14px;
+    margin-bottom: 5px;
+    font-size: 13px;
     color: #223a70;
     font-weight: 700;
 }
@@ -770,8 +822,8 @@ header {
 }
 
 .input-shell .login-input {
-    height: 62px;
-    border-radius: 18px;
+    height: 56px;
+    border-radius: 16px;
 }
 
 .input-icon,
@@ -803,9 +855,9 @@ header {
 }
 
 .login-version {
-    margin-top: 22px;
+    margin-top: 12px;
     color: #6b7da3;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 600;
 }
 
@@ -822,7 +874,7 @@ header {
 
 @media (max-width: 480px) {
     .login-screen {
-        padding: 20px 18px 30px;
+        padding: 12px 14px 14px;
     }
 
     #main-screen,
@@ -830,20 +882,63 @@ header {
         padding: 16px;
     }
 
+    .brand-mark {
+        width: 82px;
+        height: 82px;
+        border-radius: 24px;
+    }
+
+    .brand-eyebrow {
+        font-size: 10px;
+        margin-bottom: 4px;
+    }
+
     .login-brand h1 {
-        font-size: 60px;
+        font-size: 48px;
     }
 
     .login-brand p {
-        font-size: 24px;
+        font-size: 20px;
     }
 
     .wing-scene {
-        height: 230px;
+        height: 136px;
+        margin-top: 6px;
     }
 
     .login-card {
-        padding: 22px 18px 18px;
+        padding: 16px 16px 14px;
+        border-radius: 22px;
+    }
+
+    .login-card-subtitle {
+        margin-bottom: 10px;
+        font-size: 12px;
+    }
+
+    .field-group {
+        margin-top: 8px;
+    }
+
+    .input-shell .login-input,
+    .input-select {
+        height: 50px;
+        font-size: 15px;
+    }
+
+    .btn-login-primary {
+        padding: 14px 18px;
+        font-size: 16px;
+    }
+
+    .login-secondary-action {
+        padding: 11px 14px;
+        margin-top: 8px;
+    }
+
+    .login-version {
+        margin-top: 8px;
+        font-size: 11px;
     }
 
     .controls-top,

@@ -1,9 +1,9 @@
 import {
-    ADMIN_ACCOUNT,
     APP_DISPLAY_NAME,
     BRANCH_OPTIONS,
     dbRef,
     get,
+    getAdminAccount,
     set,
     state,
     setCurrentBranch
@@ -93,7 +93,8 @@ async function handleLogin() {
         return;
     }
 
-    if (id === ADMIN_ACCOUNT.id && pw === ADMIN_ACCOUNT.password) {
+    const adminAccount = getAdminAccount();
+    if (id === adminAccount.id && pw === adminAccount.password) {
         try {
             await checkDailyReset(true);
             processLoginAction(id, true);
