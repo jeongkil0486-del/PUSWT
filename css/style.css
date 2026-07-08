@@ -649,59 +649,31 @@ button {
 }
 
 .brand-wordmark {
-    position: relative;
     display: inline-flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
-    padding: 0 16px 0 8px;
+    padding: 0;
 }
 
 .login-brand h1 {
     margin: 0;
     font-family: "Segoe UI", "Arial", sans-serif;
     font-size: 56px;
-    line-height: 0.9;
-    color: #08296d;
-    letter-spacing: 0.08em;
+    line-height: 0.92;
+    color: #ffffff;
+    letter-spacing: 0.04em;
     font-weight: 900;
-    text-indent: 0.08em;
-    text-shadow: 0 12px 28px rgba(255, 255, 255, 0.22);
-}
-
-.brand-swoosh {
-    position: absolute;
-    left: 34%;
-    right: 11%;
-    bottom: 7px;
-    height: 14px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, #34d8f4 0%, #15a6df 34%, #0f67d9 75%, rgba(15, 103, 217, 0) 100%);
-    clip-path: polygon(0 100%, 20% 24%, 62% 24%, 100% 82%, 72% 100%);
-    opacity: 0.96;
-}
-
-.brand-plane {
-    position: absolute;
-    right: -2px;
-    bottom: 16px;
-    width: 18px;
-    height: 18px;
-    color: #11367d;
-}
-
-.brand-plane svg {
-    display: block;
-    width: 100%;
-    height: 100%;
+    text-indent: 0;
+    text-shadow: 0 12px 28px rgba(7, 19, 48, 0.28);
 }
 
 .login-brand p {
-    margin: 2px 0 0;
-    font-size: 17px;
-    color: #173d88;
-    letter-spacing: 0.08em;
+    margin: 4px 0 0;
+    font-size: 16px;
+    color: rgba(243, 246, 255, 0.88);
+    letter-spacing: 0.02em;
     font-weight: 500;
-    text-shadow: 0 8px 20px rgba(255, 255, 255, 0.18);
+    text-shadow: 0 8px 20px rgba(7, 19, 48, 0.24);
 }
 
 .login-card {
@@ -934,7 +906,7 @@ button {
 
     .login-brand h1 {
         font-size: 48px;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.03em;
     }
 
     .login-brand p {
@@ -943,20 +915,7 @@ button {
     }
 
     .brand-wordmark {
-        padding-right: 14px;
-    }
-
-    .brand-swoosh {
-        left: 35%;
-        right: 11%;
-        bottom: 6px;
-        height: 12px;
-    }
-
-    .brand-plane {
-        width: 16px;
-        height: 16px;
-        bottom: 14px;
+        padding: 0;
     }
 
     .login-card {

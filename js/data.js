@@ -24,10 +24,10 @@ export const ADMIN_ACCOUNTS = {
 };
 
 export const BRANCH_OPTIONS = [
-    { code: "PUS", label: "PUS (부산)" },
-    { code: "TAE", label: "TAE (대구)" },
-    { code: "CJJ", label: "CJJ (청주)" },
-    { code: "GMP", label: "GMP (김포)" }
+    { code: "PUS", label: "부산" },
+    { code: "TAE", label: "대구" },
+    { code: "CJJ", label: "청주" },
+    { code: "GMP", label: "김포" }
 ];
 
 const app = initializeApp(firebaseConfig);
