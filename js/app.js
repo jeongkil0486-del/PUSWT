@@ -181,21 +181,33 @@ function togglePasswordVisibility() {
     toggleButton.classList.toggle("active", isPassword);
 }
 
-function syncCenteredInputWidth(input) {
-    const baseLength = Number(input.dataset.baseLength || input.placeholder.length || 4);
-    const currentLength = Math.max(baseLength, input.value.length || 0);
-    input.style.width = `${currentLength + 1}ch`;
+function bindFocusableControlRows() {
+    document.querySelectorAll(".control-row-focusable").forEach((row) => {
+        row.addEventListener("click", (event) => {
+            if (event.target.closest("button")) {
+                return;
+            }
+
+            const targetId = row.dataset.focusTarget;
+            const input = targetId ? document.getElementById(targetId) : null;
+            if (!input) {
+                return;
+            }
+
+            input.focus();
+            if (typeof input.setSelectionRange === "function") {
+                const valueLength = input.value.length;
+                input.setSelectionRange(valueLength, valueLength);
+            }
+        });
+    });
 }
 
 function bindEvents() {
     document.getElementById("branch-select").addEventListener("change", (event) => {
         syncBranchSelection(event.target.value);
     });
-    ["login-id", "login-pw"].forEach((id) => {
-        const input = document.getElementById(id);
-        input.addEventListener("input", () => syncCenteredInputWidth(input));
-        syncCenteredInputWidth(input);
-    });
+    bindFocusableControlRows();
     document.getElementById("btn-login").addEventListener("click", handleLogin);
     document.getElementById("btn-toggle-password").addEventListener("click", togglePasswordVisibility);
     document.getElementById("btn-mode-self").addEventListener("click", () => setMode("본인"));

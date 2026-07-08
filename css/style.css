@@ -564,15 +564,15 @@ button {
     background-image: url("../assets/login-bg.jpg");
     background-size: cover;
     background-position: center center;
-    transform: scale(1.05);
-    filter: blur(4px) saturate(1.04) contrast(1.02);
+    transform: scale(1.03);
+    filter: blur(1.8px) saturate(1.08) contrast(1.04);
 }
 
 .login-photo-overlay {
     background:
-        linear-gradient(180deg, rgba(8, 23, 58, 0.48) 0%, rgba(10, 28, 66, 0.28) 30%, rgba(12, 27, 59, 0.56) 100%),
-        radial-gradient(circle at 50% 44%, rgba(255, 229, 185, 0.28), rgba(255, 229, 185, 0) 32%),
-        radial-gradient(circle at 84% 52%, rgba(255, 168, 82, 0.24), rgba(255, 168, 82, 0) 18%);
+        linear-gradient(180deg, rgba(8, 23, 58, 0.34) 0%, rgba(10, 28, 66, 0.18) 32%, rgba(12, 27, 59, 0.42) 100%),
+        radial-gradient(circle at 50% 46%, rgba(255, 229, 185, 0.22), rgba(255, 229, 185, 0) 34%),
+        radial-gradient(circle at 84% 52%, rgba(255, 168, 82, 0.18), rgba(255, 168, 82, 0) 20%);
 }
 
 .login-curve {
@@ -721,6 +721,10 @@ button {
     transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
+.control-row-focusable {
+    cursor: text;
+}
+
 .control-row:focus-within {
     border-color: #2f71ff;
     box-shadow: 0 0 0 4px rgba(47, 113, 255, 0.12), 0 8px 18px rgba(11, 40, 98, 0.1);
@@ -767,6 +771,7 @@ button {
     align-items: center;
     justify-content: center;
     min-width: 0;
+    width: 100%;
     max-width: 100%;
     gap: 0;
 }
@@ -777,7 +782,8 @@ button {
 
 .control-input {
     min-width: 0;
-    height: auto;
+    width: 100%;
+    height: 100%;
     margin: 0;
     padding: 0;
     border: 0;
@@ -785,23 +791,17 @@ button {
     background: transparent;
     color: #22304d;
     font-size: 16px;
-    line-height: 1;
+    line-height: normal;
     display: block;
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
+    caret-color: #123f96;
+    overflow: visible;
 }
 
 .control-input-centered {
     text-align: center;
-}
-
-.control-input-id {
-    width: 4ch;
-}
-
-.control-input-password {
-    width: 11ch;
 }
 
 .control-input::placeholder {
@@ -852,7 +852,7 @@ button {
 }
 
 .login-input {
-    transform: translateY(0.5px);
+    transform: none;
 }
 
 .password-toggle.active {
