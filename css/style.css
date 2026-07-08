@@ -13,9 +13,9 @@ body {
     --login-control-height: 54px;
     --login-control-radius: 16px;
     --login-control-border: 1px;
-    --login-control-side-padding: 20px;
+    --login-control-side-padding: 19px;
     --login-control-icon-size: 20px;
-    --login-control-slot-width: 32px;
+    --login-control-slot-width: 34px;
 }
 
 * {
@@ -683,10 +683,11 @@ button {
 }
 
 .control-row {
+    position: relative;
     display: flex;
     align-items: center;
     width: 100%;
-    min-height: var(--login-control-height);
+    height: var(--login-control-height);
     padding: 0 var(--login-control-side-padding);
     border: var(--login-control-border) solid #d8def0;
     border-radius: var(--login-control-radius);
@@ -717,6 +718,7 @@ button {
     width: var(--login-control-icon-size);
     height: var(--login-control-icon-size);
     display: block;
+    transform: translateY(0.5px);
 }
 
 .control-leading-blank {
@@ -727,7 +729,7 @@ button {
     flex: 1 1 auto;
     width: 100%;
     min-width: 0;
-    height: 100%;
+    height: calc(100% - 2px);
     margin: 0;
     padding: 0;
     border: 0;
@@ -735,7 +737,8 @@ button {
     background: transparent;
     color: #22304d;
     font-size: 16px;
-    line-height: normal;
+    line-height: 1.15;
+    display: block;
 }
 
 .control-input::placeholder {
@@ -743,17 +746,25 @@ button {
     opacity: 1;
 }
 
-.control-select {
+.control-display {
+    display: inline-flex;
+    align-items: center;
+    color: #22304d;
+    pointer-events: none;
+}
+
+.control-native-select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    border: 0;
+    opacity: 0;
+    cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    cursor: pointer;
-    text-align: left;
-    text-align-last: left;
-}
-
-.control-select::-ms-expand {
-    display: none;
 }
 
 .control-chevron {
@@ -770,6 +781,11 @@ button {
     border: 0;
     background: transparent;
     cursor: pointer;
+}
+
+.login-input {
+    position: relative;
+    top: 1px;
 }
 
 .password-toggle.active {
@@ -799,9 +815,9 @@ button {
 @media (max-width: 480px) {
     :root {
         --login-control-height: 48px;
-        --login-control-side-padding: 18px;
+        --login-control-side-padding: 17px;
         --login-control-icon-size: 18px;
-        --login-control-slot-width: 30px;
+        --login-control-slot-width: 32px;
     }
 
     .login-screen {

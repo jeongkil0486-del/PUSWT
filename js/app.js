@@ -55,11 +55,21 @@ function renderBranchOptions() {
     select.innerHTML = BRANCH_OPTIONS.map((branch) => (
         `<option value="${branch.code}">${branch.label}</option>`
     )).join("");
+    updateBranchSelectionDisplay(select.value);
+}
+
+function updateBranchSelectionDisplay(branchCode) {
+    const select = document.getElementById("branch-select");
+    const display = document.getElementById("branch-select-display");
+    const selectedOption = [...select.options].find((option) => option.value === branchCode) || select.selectedOptions[0];
+    display.textContent = selectedOption ? selectedOption.textContent : "";
 }
 
 function syncBranchSelection(branchCode) {
     const normalized = setCurrentBranch(branchCode);
-    document.getElementById("branch-select").value = normalized;
+    const select = document.getElementById("branch-select");
+    select.value = normalized;
+    updateBranchSelectionDisplay(normalized);
     saveSelectedBranch(normalized);
     updateBranchBadges();
 }
