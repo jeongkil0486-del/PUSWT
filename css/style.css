@@ -10,12 +10,13 @@ body {
 }
 
 :root {
-    --login-control-height: 54px;
+    --login-control-height: 56px;
     --login-control-radius: 16px;
     --login-control-border: 1px;
-    --login-control-side-padding: 19px;
-    --login-control-icon-size: 20px;
-    --login-control-slot-width: 34px;
+    --login-control-side-padding: 18px;
+    --login-control-icon-size: 19px;
+    --login-control-slot-width: 28px;
+    --login-control-gap: 10px;
 }
 
 * {
@@ -684,11 +685,13 @@ button {
 
 .control-row {
     position: relative;
-    display: flex;
+    display: grid;
+    grid-template-columns: var(--login-control-slot-width) minmax(0, 1fr) var(--login-control-slot-width);
     align-items: center;
     width: 100%;
     height: var(--login-control-height);
     padding: 0 var(--login-control-side-padding);
+    column-gap: var(--login-control-gap);
     border: var(--login-control-border) solid #d8def0;
     border-radius: var(--login-control-radius);
     background: #ffffff;
@@ -704,13 +707,11 @@ button {
 .control-leading,
 .control-trailing {
     width: var(--login-control-slot-width);
-    min-width: var(--login-control-slot-width);
     height: 100%;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
     color: #7c88a5;
-    flex-shrink: 0;
 }
 
 .control-leading svg,
@@ -718,18 +719,24 @@ button {
     width: var(--login-control-icon-size);
     height: var(--login-control-icon-size);
     display: block;
-    transform: translateY(0.5px);
+    transform: none;
 }
 
 .control-leading-blank {
     color: transparent;
 }
 
+.control-body {
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+
 .control-input {
-    flex: 1 1 auto;
     width: 100%;
     min-width: 0;
-    height: calc(100% - 2px);
+    height: auto;
     margin: 0;
     padding: 0;
     border: 0;
@@ -737,8 +744,11 @@ button {
     background: transparent;
     color: #22304d;
     font-size: 16px;
-    line-height: 1.15;
+    line-height: 1;
     display: block;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
 }
 
 .control-input::placeholder {
@@ -747,10 +757,11 @@ button {
 }
 
 .control-display {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     color: #22304d;
     pointer-events: none;
+    transform: translateY(1px);
 }
 
 .control-native-select {
@@ -781,11 +792,13 @@ button {
     border: 0;
     background: transparent;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .login-input {
-    position: relative;
-    top: 1px;
+    transform: translateY(1px);
 }
 
 .password-toggle.active {
@@ -814,10 +827,11 @@ button {
 
 @media (max-width: 480px) {
     :root {
-        --login-control-height: 48px;
-        --login-control-side-padding: 17px;
+        --login-control-height: 52px;
+        --login-control-side-padding: 16px;
         --login-control-icon-size: 18px;
-        --login-control-slot-width: 32px;
+        --login-control-slot-width: 26px;
+        --login-control-gap: 10px;
     }
 
     .login-screen {
