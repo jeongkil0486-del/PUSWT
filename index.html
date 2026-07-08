@@ -11,31 +11,8 @@
     <link rel="apple-touch-icon" href="assets/app-icon.png">
     <link rel="icon" sizes="192x192" href="assets/app-icon.png">
     <title>TAS Walkie-Talkie</title>
-    <script>
-        (function clearLegacyPwaCache() {
-            if ("serviceWorker" in navigator) {
-                navigator.serviceWorker.getRegistrations()
-                    .then(function (registrations) {
-                        return Promise.all(registrations.map(function (registration) {
-                            return registration.unregister();
-                        }));
-                    })
-                    .catch(function () {});
-            }
-
-            if ("caches" in window) {
-                caches.keys()
-                    .then(function (keys) {
-                        return Promise.all(keys.map(function (key) {
-                            return caches.delete(key);
-                        }));
-                    })
-                    .catch(function () {});
-            }
-        })();
-    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="css/style.css?v=20260708-debug-2">
+    <link rel="stylesheet" href="css/style.css?v=20260708-ui-2">
 </head>
 <body>
 
@@ -86,7 +63,7 @@
             <div class="field-group">
                 <label class="sr-only" for="login-id">ID</label>
                 <div class="control-row">
-                    <span class="control-leading" aria-hidden="true">
+                    <span class="control-leading control-leading-user" aria-hidden="true">
                         <svg viewBox="0 0 24 24">
                             <path d="M12 12a4 4 0 100-8 4 4 0 000 8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
                             <path d="M4 20a8 8 0 0116 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
@@ -102,7 +79,7 @@
             <div class="field-group">
                 <label class="sr-only" for="login-pw">Password</label>
                 <div class="control-row">
-                    <span class="control-leading" aria-hidden="true">
+                    <span class="control-leading control-leading-lock" aria-hidden="true">
                         <svg viewBox="0 0 24 24">
                             <rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
                             <path d="M8 11V8a4 4 0 118 0v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
@@ -111,7 +88,7 @@
                     <span class="control-body">
                         <input type="password" id="login-pw" class="control-input login-input" placeholder="Password">
                     </span>
-                    <button type="button" id="btn-toggle-password" class="control-trailing password-toggle" aria-label="비밀번호 보기 전환">
+                    <button type="button" id="btn-toggle-password" class="control-trailing control-trailing-eye password-toggle" aria-label="비밀번호 보기 전환">
                         <svg viewBox="0 0 24 24">
                             <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
                             <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"></circle>

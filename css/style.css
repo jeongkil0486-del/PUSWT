@@ -10,12 +10,12 @@ body {
 }
 
 :root {
-    --login-control-height: 56px;
+    --login-control-height: 52px;
     --login-control-radius: 16px;
     --login-control-border: 1px;
     --login-control-side-padding: 18px;
-    --login-control-icon-size: 19px;
-    --login-control-slot-width: 28px;
+    --login-control-icon-size: 18px;
+    --login-control-slot-width: 26px;
     --login-control-gap: 10px;
 }
 
@@ -148,13 +148,13 @@ header {
     align-items: center;
     justify-content: center;
     border-radius: var(--login-control-radius);
-    background: linear-gradient(135deg, #d62828, #ff5a36);
-    border: 2px solid rgba(255, 244, 133, 0.9);
+    background: linear-gradient(135deg, #0b2a6f, #103f98);
+    border: 0;
     color: white;
     font-size: 17px;
     line-height: normal;
     letter-spacing: 0.02em;
-    box-shadow: 0 14px 28px rgba(11, 42, 111, 0.28);
+    box-shadow: 0 14px 28px rgba(11, 42, 111, 0.24);
 }
 
 .login-secondary-action {
@@ -642,7 +642,7 @@ button {
     font-family: "Segoe UI", "Arial", sans-serif;
     font-size: 58px;
     line-height: 0.92;
-    color: #23c552;
+    color: #ffffff;
     letter-spacing: 0.12em;
     font-weight: 900;
     text-indent: 0.14em;
@@ -666,7 +666,7 @@ button {
     margin-top: 2px;
     padding: 16px 18px 14px;
     border-radius: 24px;
-    background: rgba(255, 240, 120, 0.96);
+    background: rgba(255, 255, 255, 0.94);
     border: 1px solid rgba(255, 255, 255, 0.78);
     box-shadow: 0 22px 40px rgba(6, 20, 54, 0.22);
     backdrop-filter: blur(14px);
@@ -723,6 +723,22 @@ button {
     transform: none;
 }
 
+.control-leading-user svg {
+    transform: translateY(0.5px);
+}
+
+.control-leading-lock svg {
+    transform: translateY(0.5px);
+}
+
+.control-chevron svg {
+    transform: translateY(0.5px);
+}
+
+.control-trailing-eye svg {
+    transform: translateY(0.5px);
+}
+
 .control-leading-blank {
     color: transparent;
 }
@@ -762,7 +778,7 @@ button {
     align-items: center;
     color: #22304d;
     pointer-events: none;
-    transform: translateY(1px);
+    transform: translateY(0.5px);
 }
 
 .control-native-select {
@@ -799,7 +815,7 @@ button {
 }
 
 .login-input {
-    transform: translateY(1px);
+    transform: translateY(0.5px);
 }
 
 .password-toggle.active {
