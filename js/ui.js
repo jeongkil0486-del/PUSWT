@@ -1,69 +1,112 @@
-import { db, ref, set, get, remove, onValue, push, runTransaction, state, screens } from './data.js';
-import { clearSession } from './storage.js';
+import {
+    dbRef,
+    set,
+    get,
+    remove,
+    onValue,
+    push,
+    runTransaction,
+    state,
+    screens,
+    getBranchLabel
+} from "./data.js";
+import { clearSession } from "./storage.js";
+
+const MODE_SELF = "본인";
+const MODE_CREW = "크루";
+const MODE_CHARGE = "충전중";
+
+function getModeDisplayName() {
+    if (state.currentMode === MODE_CREW) {
+        return `${state.currentUser}(크루)`;
+    }
+    if (state.currentMode === MODE_CHARGE) {
+        return `${state.currentUser}(충전중)`;
+    }
+    return state.currentUser;
+}
+
+function formatElapsedTime(elapsed) {
+    const mins = Math.floor(elapsed / 60000);
+    const secs = Math.floor((elapsed % 60000) / 1000);
+    return mins > 0 ? `${mins}분 ${secs}초 전` : `${secs}초 전`;
+}
 
 export function switchScreen(target) {
-    Object.values(screens).forEach((screen) => screen.classList.add('hidden'));
-    screens[target].classList.remove('hidden');
+    Object.values(screens).forEach((screen) => screen.classList.add("hidden"));
+    screens[target].classList.remove("hidden");
+}
+
+export function updateBranchBadges() {
+    const label = getBranchLabel();
+    const mainBadge = document.getElementById("main-branch-badge");
+    const adminBadge = document.getElementById("admin-branch-badge");
+
+    if (mainBadge) {
+        mainBadge.innerText = label;
+    }
+    if (adminBadge) {
+        adminBadge.innerText = label;
+    }
 }
 
 export function updateUserHeader() {
-    document.getElementById('user-greeting').innerText = `${state.currentUser}님 환영합니다`;
-    document.getElementById('date-display').innerText = state.todayString;
+    document.getElementById("user-greeting").innerText = `${state.currentUser}님 환영합니다`;
+    document.getElementById("date-display").innerText = state.todayString;
+    updateBranchBadges();
 }
 
 export function setMode(mode) {
     state.currentMode = mode;
-    const btnSelf = document.getElementById('btn-mode-self');
-    const btnCrew = document.getElementById('btn-mode-crew');
-    const btnCharge = document.getElementById('btn-mode-charge');
+    const btnSelf = document.getElementById("btn-mode-self");
+    const btnCrew = document.getElementById("btn-mode-crew");
+    const btnCharge = document.getElementById("btn-mode-charge");
 
-    btnSelf.className = 'btn ' + (mode === '본인' ? 'btn-mode-self' : 'btn-secondary');
-    btnCrew.className = 'btn ' + (mode === '크루' ? 'btn-mode-crew' : 'btn-secondary');
-    btnCharge.className = 'btn ' + (mode === '충전중' ? 'btn-mode-charge' : 'btn-secondary');
-
-    [btnSelf, btnCrew, btnCharge].forEach((button) => {
-        button.style.flex = '1';
-        button.style.padding = '12px 4px';
-        button.style.fontSize = '14px';
-    });
+    btnSelf.className = `btn ${mode === MODE_SELF ? "btn-mode-self" : "btn-secondary"}`;
+    btnCrew.className = `btn ${mode === MODE_CREW ? "btn-mode-crew" : "btn-secondary"}`;
+    btnCharge.className = `btn ${mode === MODE_CHARGE ? "btn-mode-charge" : "btn-secondary"}`;
 }
 
 export function toggleEditMode(button) {
     state.isEditMode = !state.isEditMode;
     if (state.isEditMode) {
-        button.classList.replace('btn-secondary', 'btn-warning');
-        button.style.color = '#333';
-        alert('수정 모드가 켜졌습니다.\n원하는 번호를 누르면 현재 사용자를 밀어내고 내 이름으로 등록됩니다.');
+        button.classList.replace("btn-secondary", "btn-warning");
+        button.style.color = "#333";
+        alert("수정 모드가 켜졌습니다.\n원하는 번호를 누르면 현재 사용자를 밀어내고 내 이름으로 등록됩니다.");
         return;
     }
 
-    button.classList.replace('btn-warning', 'btn-secondary');
-    button.style.color = 'white';
+    button.classList.replace("btn-warning", "btn-secondary");
+    button.style.color = "white";
 }
 
 export function resetEditModeButton() {
     state.isEditMode = false;
-    const button = document.getElementById('btn-edit-mode');
-    button.classList.replace('btn-warning', 'btn-secondary');
-    button.style.color = 'white';
+    const button = document.getElementById("btn-edit-mode");
+    button.classList.remove("btn-warning");
+    button.classList.add("btn-secondary");
+    button.style.color = "white";
 }
 
 export async function sendUserAlarm() {
     try {
-        await push(ref(db, 'system/userAlarms'), {
+        await push(dbRef("system/userAlarms"), {
             timestamp: Date.now(),
             sender: state.currentUser,
             dismissed: false
         });
-        alert('관리자에게 호출 알림을 전송했습니다.');
+        alert("관리자에게 호출 알림을 전송했습니다.");
     } catch (error) {
-        alert('알림 전송 실패. 네트워크를 확인해주세요.');
+        alert("알림 전송 실패. 네트워크를 확인해주세요.");
     }
 }
 
 export function logoutAction() {
     state.currentUser = null;
     state.isAdmin = false;
+    state.currentBoardNumbers = {};
+    state.currentUserAlarmSenders = new Set();
+    state.currentAlarmSenders = new Set();
     clearSession();
     location.reload();
 }
@@ -71,23 +114,24 @@ export function logoutAction() {
 export function renderGrid(gridElement, totalNumbers, disabledNumbers, numbers, options = {}) {
     const { isAdminView = false, onAdminClear, onToggleNumber } = options;
 
-    gridElement.innerHTML = '';
+    gridElement.innerHTML = "";
     for (let i = 1; i <= totalNumbers; i += 1) {
-        const box = document.createElement('div');
-        box.className = 'number-box';
+        const box = document.createElement("div");
+        box.className = "number-box";
         box.innerText = i;
 
         if (disabledNumbers[i]) {
-            box.classList.add('disabled');
+            box.classList.add("disabled");
             box.innerHTML += '<div class="name-tag">사용제한</div>';
         } else if (numbers[i]) {
-            const isCharge = numbers[i].includes('(충전중)');
-            const isCrew = numbers[i].includes('(크루)');
+            const isCharge = numbers[i].includes("(충전중)");
+            const isCrew = numbers[i].includes("(크루)");
+
             if (isCharge) {
-                box.classList.add('occupied-charge');
+                box.classList.add("occupied-charge");
                 box.innerHTML += '<div class="name-tag">충전중</div>';
             } else {
-                box.classList.add(isCrew ? 'occupied-crew' : 'occupied-self');
+                box.classList.add(isCrew ? "occupied-crew" : "occupied-self");
                 box.innerHTML += `<div class="name-tag">${numbers[i]}</div>`;
             }
 
@@ -105,34 +149,34 @@ export function renderGrid(gridElement, totalNumbers, disabledNumbers, numbers, 
 }
 
 export function applyAlarmBlinkToUserGrid(senders) {
-    const grid = document.getElementById('number-grid');
+    const grid = document.getElementById("number-grid");
     if (!grid) {
         return;
     }
 
-    Array.from(grid.querySelectorAll('.number-box')).forEach((box) => {
-        const nameTag = box.querySelector('.name-tag');
-        const base = nameTag ? nameTag.innerText.split('(')[0] : '';
+    Array.from(grid.querySelectorAll(".number-box")).forEach((box) => {
+        const nameTag = box.querySelector(".name-tag");
+        const base = nameTag ? nameTag.innerText.split("(")[0] : "";
         if (senders.has(base)) {
-            box.classList.add('alarm-blink');
+            box.classList.add("alarm-blink");
         } else {
-            box.classList.remove('alarm-blink');
+            box.classList.remove("alarm-blink");
         }
     });
 }
 
 export function listenToUserAlarmsForUser() {
     const fiveMin = 5 * 60 * 1000;
-    onValue(ref(db, 'system/userAlarms'), (snap) => {
-        const banner = document.getElementById('user-incoming-alarm');
-        const list = document.getElementById('user-alarm-list');
+    onValue(dbRef("system/userAlarms"), (snap) => {
+        const banner = document.getElementById("user-incoming-alarm");
+        const list = document.getElementById("user-alarm-list");
         if (!banner || !list) {
             return;
         }
 
         if (!snap.exists()) {
             state.currentUserAlarmSenders = new Set();
-            banner.classList.add('hidden');
+            banner.classList.add("hidden");
             applyAlarmBlinkToUserGrid(state.currentUserAlarmSenders);
             return;
         }
@@ -146,38 +190,32 @@ export function listenToUserAlarmsForUser() {
 
         if (active.length === 0) {
             state.currentUserAlarmSenders = new Set();
-            banner.classList.add('hidden');
+            banner.classList.add("hidden");
             applyAlarmBlinkToUserGrid(state.currentUserAlarmSenders);
             return;
         }
 
-        list.innerHTML = active.map((alarm) => {
-            const elapsed = now - alarm.timestamp;
-            const mins = Math.floor(elapsed / 60000);
-            const secs = Math.floor((elapsed % 60000) / 1000);
-            const timeAgo = mins > 0 ? `${mins}분 ${secs}초 전` : `${secs}초 전`;
-            return '<div style="padding:4px 0; border-bottom:1px solid #ffd0d0;">'
-                + `&#128276; <b>${alarm.sender}</b> (${timeAgo})`
-                + '</div>';
-        }).join('');
+        list.innerHTML = active.map((alarm) => (
+            `<div style="padding:4px 0; border-bottom:1px solid #ffd0d0;">&#128276; <b>${alarm.sender}</b> (${formatElapsedTime(now - alarm.timestamp)})</div>`
+        )).join("");
 
         state.currentUserAlarmSenders = new Set(active.map((alarm) => alarm.sender));
-        banner.classList.remove('hidden');
+        banner.classList.remove("hidden");
         applyAlarmBlinkToUserGrid(state.currentUserAlarmSenders);
     });
 }
 
 export function listenToBoard() {
-    const grid = document.getElementById('number-grid');
-    onValue(ref(db, 'system'), (snapshot) => {
+    const grid = document.getElementById("number-grid");
+    onValue(dbRef("system"), (snapshot) => {
         if (!snapshot.exists()) {
             return;
         }
 
         const data = snapshot.val();
-        const total = (data.config && data.config.totalNumbers) || 20;
-        const disabled = (data.config && data.config.disabledNumbers) || {};
-        state.currentBoardNumbers = (data.boardState && data.boardState.numbers) || {};
+        const total = data.config?.totalNumbers || 20;
+        const disabled = data.config?.disabledNumbers || {};
+        state.currentBoardNumbers = data.boardState?.numbers || {};
 
         renderGrid(grid, total, disabled, state.currentBoardNumbers, {
             onToggleNumber: toggleNumber
@@ -196,29 +234,25 @@ export async function toggleNumber(num, currentOccupant, isOccupied) {
     state.isProcessingClick = true;
 
     try {
-        const timeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false });
-        const displayName = state.currentMode === '크루'
-            ? `${state.currentUser}(크루)`
-            : state.currentMode === '충전중'
-                ? `${state.currentUser}(충전중)`
-                : state.currentUser;
-        const logRef = ref(db, 'system/boardState/log');
+        const timeStr = new Date().toLocaleTimeString("ko-KR", { hour12: false });
+        const displayName = getModeDisplayName();
+        const logRef = dbRef("system/boardState/log");
 
         if (state.isEditMode && isOccupied) {
-            if (currentOccupant.split('(')[0] === state.currentUser) {
-                alert('이미 본인이 사용 중인 번호입니다.');
+            if (currentOccupant.split("(")[0] === state.currentUser) {
+                alert("이미 본인이 사용 중인 번호입니다.");
             } else if (confirm(`현재 [${currentOccupant}] 님이 사용 중입니다.\n강제로 내 번호로 수정하시겠습니까?`)) {
-                if (state.currentMode === '본인') {
+                if (state.currentMode === MODE_SELF) {
                     const tasks = [];
                     Object.entries(state.currentBoardNumbers).forEach(([key, value]) => {
                         if (value === state.currentUser) {
-                            tasks.push(remove(ref(db, `system/boardState/numbers/${key}`)));
+                            tasks.push(remove(dbRef(`system/boardState/numbers/${key}`)));
                         }
                     });
                     await Promise.all(tasks);
                 }
-                await set(ref(db, `system/boardState/numbers/${num}`), displayName);
-                await push(logRef, { time: timeStr, num, action: '수정(뺏기)', user: displayName });
+                await set(dbRef(`system/boardState/numbers/${num}`), displayName);
+                await push(logRef, { time: timeStr, num, action: "수정(뺏기)", user: displayName });
             }
 
             resetEditModeButton();
@@ -226,18 +260,18 @@ export async function toggleNumber(num, currentOccupant, isOccupied) {
         }
 
         if (isOccupied) {
-            const occupantBase = currentOccupant.split('(')[0];
+            const occupantBase = currentOccupant.split("(")[0];
             if (occupantBase !== state.currentUser) {
-                alert('본인의 번호판만 반납할 수 있습니다.\n(다른 사람의 번호를 뺏으려면 상단의 [수정] 버튼을 켜주세요)');
+                alert("본인의 번호판만 반납할 수 있습니다.\n(다른 사람의 번호를 뺏으려면 상단의 [수정] 버튼을 켜주세요)");
                 return;
             }
 
-            await remove(ref(db, `system/boardState/numbers/${num}`));
-            await push(logRef, { time: timeStr, num, action: '반납', user: currentOccupant });
+            await remove(dbRef(`system/boardState/numbers/${num}`));
+            await push(logRef, { time: timeStr, num, action: "반납", user: currentOccupant });
             return;
         }
 
-        if (state.currentMode === '본인') {
+        if (state.currentMode === MODE_SELF) {
             const existEntry = Object.entries(state.currentBoardNumbers).find(([, value]) => value === state.currentUser);
 
             if (existEntry) {
@@ -245,7 +279,7 @@ export async function toggleNumber(num, currentOccupant, isOccupied) {
                     return;
                 }
 
-                const result = await runTransaction(ref(db, 'system/boardState/numbers'), (numbers) => {
+                const result = await runTransaction(dbRef("system/boardState/numbers"), (numbers) => {
                     if (!numbers) {
                         numbers = {};
                     }
@@ -262,12 +296,12 @@ export async function toggleNumber(num, currentOccupant, isOccupied) {
                 });
 
                 if (result.committed) {
-                    await push(logRef, { time: timeStr, num, action: '자리이동', user: state.currentUser });
+                    await push(logRef, { time: timeStr, num, action: "자리이동", user: state.currentUser });
                 } else {
-                    alert('간발의 차이로 다른 사람이 먼저 번호를 선택했습니다.');
+                    alert("간발의 차이로 다른 사람이 먼저 번호를 선택했습니다.");
                 }
             } else {
-                const result = await runTransaction(ref(db, `system/boardState/numbers/${num}`), (currentData) => {
+                const result = await runTransaction(dbRef(`system/boardState/numbers/${num}`), (currentData) => {
                     if (currentData === null) {
                         return state.currentUser;
                     }
@@ -275,14 +309,14 @@ export async function toggleNumber(num, currentOccupant, isOccupied) {
                 });
 
                 if (result.committed) {
-                    await push(logRef, { time: timeStr, num, action: '선택', user: state.currentUser });
+                    await push(logRef, { time: timeStr, num, action: "선택", user: state.currentUser });
                 } else {
-                    alert('간발의 차이로 다른 사람이 먼저 번호를 선택했습니다.');
+                    alert("간발의 차이로 다른 사람이 먼저 번호를 선택했습니다.");
                 }
             }
         } else {
-            const actionLabel = state.currentMode === '충전중' ? '선택(충전중)' : '선택(크루)';
-            const result = await runTransaction(ref(db, `system/boardState/numbers/${num}`), (currentData) => {
+            const actionLabel = state.currentMode === MODE_CHARGE ? "선택(충전중)" : "선택(크루)";
+            const result = await runTransaction(dbRef(`system/boardState/numbers/${num}`), (currentData) => {
                 if (currentData === null) {
                     return displayName;
                 }
@@ -292,12 +326,12 @@ export async function toggleNumber(num, currentOccupant, isOccupied) {
             if (result.committed) {
                 await push(logRef, { time: timeStr, num, action: actionLabel, user: displayName });
             } else {
-                alert('간발의 차이로 다른 사람이 먼저 번호를 선택했습니다.');
+                alert("간발의 차이로 다른 사람이 먼저 번호를 선택했습니다.");
             }
         }
     } catch (error) {
-        console.error('toggleNumber 오류:', error);
-        alert('처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+        console.error("toggleNumber 오류:", error);
+        alert("처리 중 오류가 발생했습니다. 다시 시도해주세요.");
     } finally {
         setTimeout(() => {
             state.isProcessingClick = false;
@@ -307,25 +341,29 @@ export async function toggleNumber(num, currentOccupant, isOccupied) {
 
 export async function returnAllNumbers() {
     try {
-        const snap = await get(ref(db, 'system/boardState/numbers'));
+        const snap = await get(dbRef("system/boardState/numbers"));
         if (!snap.exists()) {
-            alert('현재 사용 중인 번호가 없습니다.');
+            alert("현재 사용 중인 번호가 없습니다.");
             return;
         }
 
         const numbers = snap.val();
-        const timeStr = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+        const timeStr = new Date().toLocaleTimeString("ko-KR", { hour12: false });
         let hasChanged = false;
         const tasks = [];
 
         Object.entries(numbers).forEach(([num, name]) => {
-            if (name && (name === state.currentUser || name === `${state.currentUser}(크루)` || name === `${state.currentUser}(충전중)`)) {
+            if (name && (
+                name === state.currentUser ||
+                name === `${state.currentUser}(크루)` ||
+                name === `${state.currentUser}(충전중)`
+            )) {
                 tasks.push(
-                    remove(ref(db, `system/boardState/numbers/${num}`)).then(() => push(ref(db, 'system/boardState/log'), {
+                    remove(dbRef(`system/boardState/numbers/${num}`)).then(() => push(dbRef("system/boardState/log"), {
                         time: timeStr,
                         num,
-                        action: '전체반납',
-                        user: name.split('(')[0]
+                        action: "전체반납",
+                        user: name.split("(")[0]
                     }))
                 );
                 hasChanged = true;
@@ -333,32 +371,31 @@ export async function returnAllNumbers() {
         });
 
         if (!hasChanged) {
-            alert('반납할 내 번호가 없습니다.');
+            alert("반납할 내 번호가 없습니다.");
             return;
         }
 
         await Promise.all(tasks);
-        alert('내 이름이 들어간 모든 번호가 초기화(반납)되었습니다.');
+        alert("내 이름이 들어간 모든 번호가 초기화(반납)되었습니다.");
     } catch (error) {
-        console.error('전체 반납 오류:', error);
-        alert('처리 중 오류가 발생했습니다.');
+        console.error("전체 반납 오류:", error);
+        alert("처리 중 오류가 발생했습니다.");
     }
 }
 
 export function listenToAlarms() {
-    onValue(ref(db, 'system/alarm'), async (snap) => {
+    onValue(dbRef("system/alarm"), async (snap) => {
         if (!snap.exists()) {
             return;
         }
 
         const alarmData = snap.val();
-        const elapsed = Date.now() - alarmData.timestamp;
-        if (elapsed > 5000) {
+        if (Date.now() - alarmData.timestamp > 5000) {
             return;
         }
 
         try {
-            const stateSnap = await get(ref(db, 'system/boardState/numbers'));
+            const stateSnap = await get(dbRef("system/boardState/numbers"));
             const numbers = stateSnap.exists() ? stateSnap.val() || {} : {};
             const isMyNameLeft = Object.values(numbers).some((name) => name && name.includes(state.currentUser));
 
@@ -366,14 +403,14 @@ export function listenToAlarms() {
                 if (navigator.vibrate) {
                     navigator.vibrate([500, 200, 500, 200, 500]);
                 }
-                const overlay = document.getElementById('alarm-overlay');
-                overlay.style.display = 'flex';
+                const overlay = document.getElementById("alarm-overlay");
+                overlay.style.display = "flex";
                 overlay.onclick = () => {
-                    overlay.style.display = 'none';
+                    overlay.style.display = "none";
                 };
             }
         } catch (error) {
-            console.error('알람 처리 오류:', error);
+            console.error("알람 처리 오류:", error);
         }
     });
 }

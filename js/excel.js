@@ -1,21 +1,21 @@
-import { db, ref, get, state } from './data.js';
+import { dbRef, get, state, getBranchLabel } from "./data.js";
 
 export async function exportExcel() {
     try {
-        const targetDate = document.getElementById('export-date').value;
+        const targetDate = document.getElementById("export-date").value;
         if (!targetDate) {
-            alert('다운로드할 날짜를 선택해주세요.');
+            alert("다운로드할 날짜를 선택해주세요.");
             return;
         }
 
         let logData = {};
         if (targetDate === state.todayString) {
-            const todaySnap = await get(ref(db, 'system/boardState'));
+            const todaySnap = await get(dbRef("system/boardState"));
             if (todaySnap.exists() && todaySnap.val().log) {
                 logData = todaySnap.val().log;
             }
         } else {
-            const historySnap = await get(ref(db, `history/${targetDate}`));
+            const historySnap = await get(dbRef(`history/${targetDate}`));
             if (historySnap.exists() && historySnap.val().log) {
                 logData = historySnap.val().log;
             }
@@ -28,6 +28,7 @@ export async function exportExcel() {
         }
 
         const excelData = logEntries.map((log) => ({
+            지점: getBranchLabel(),
             날짜: targetDate,
             시간: log.time,
             작업: log.action,
@@ -37,10 +38,10 @@ export async function exportExcel() {
 
         const worksheet = XLSX.utils.json_to_sheet(excelData);
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, '사용기록');
-        XLSX.writeFile(workbook, `번호판기록_${targetDate}.xlsx`);
+        XLSX.utils.book_append_sheet(workbook, worksheet, "사용기록");
+        XLSX.writeFile(workbook, `번호판기록_${state.currentBranch}_${targetDate}.xlsx`);
     } catch (error) {
         console.error(error);
-        alert('엑셀 추출 중 오류가 발생했습니다.');
+        alert("엑셀 추출 중 오류가 발생했습니다.");
     }
 }

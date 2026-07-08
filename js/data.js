@@ -14,6 +14,20 @@ export const firebaseConfig = {
     measurementId: "G-NTHVH61ZLS"
 };
 
+export const APP_DISPLAY_NAME = "TAS Walkie-Talkie";
+export const DEFAULT_BRANCH = "PUS";
+export const ADMIN_ACCOUNT = {
+    id: "PUSWT",
+    password: "PUSWT"
+};
+
+export const BRANCH_OPTIONS = [
+    { code: "PUS", label: "PUS (부산)" },
+    { code: "TAE", label: "TAE (대구)" },
+    { code: "CJJ", label: "CJJ (청주)" },
+    { code: "GMP", label: "GMP (김포)" }
+];
+
 const app = initializeApp(firebaseConfig);
 
 export const db = getDatabase(app);
@@ -28,11 +42,40 @@ export const state = {
     currentBoardNumbers: {},
     currentUserAlarmSenders: new Set(),
     currentAlarmSenders: new Set(),
-    todayString: ""
+    todayString: "",
+    currentBranch: DEFAULT_BRANCH
 };
 
 export const screens = {
-    login: document.getElementById('login-screen'),
-    main: document.getElementById('main-screen'),
-    admin: document.getElementById('admin-screen')
+    login: document.getElementById("login-screen"),
+    main: document.getElementById("main-screen"),
+    admin: document.getElementById("admin-screen")
 };
+
+export function normalizeBranch(branchCode) {
+    const normalized = String(branchCode || DEFAULT_BRANCH).toUpperCase();
+    return BRANCH_OPTIONS.some((branch) => branch.code === normalized) ? normalized : DEFAULT_BRANCH;
+}
+
+export function getBranchLabel(branchCode = state.currentBranch) {
+    const normalized = normalizeBranch(branchCode);
+    return BRANCH_OPTIONS.find((branch) => branch.code === normalized)?.label || normalized;
+}
+
+export function isDefaultBranch(branchCode = state.currentBranch) {
+    return normalizeBranch(branchCode) === DEFAULT_BRANCH;
+}
+
+export function scopedPath(path, branchCode = state.currentBranch) {
+    const normalized = normalizeBranch(branchCode);
+    return isDefaultBranch(normalized) ? path : `branches/${normalized}/${path}`;
+}
+
+export function dbRef(path, branchCode = state.currentBranch) {
+    return ref(db, scopedPath(path, branchCode));
+}
+
+export function setCurrentBranch(branchCode) {
+    state.currentBranch = normalizeBranch(branchCode);
+    return state.currentBranch;
+}
