@@ -152,9 +152,20 @@ function togglePasswordVisibility() {
     toggleButton.classList.toggle("active", isPassword);
 }
 
+function syncCenteredInputWidth(input) {
+    const baseLength = Number(input.dataset.baseLength || input.placeholder.length || 4);
+    const currentLength = Math.max(baseLength, input.value.length || 0);
+    input.style.width = `${currentLength + 1}ch`;
+}
+
 function bindEvents() {
     document.getElementById("branch-select").addEventListener("change", (event) => {
         syncBranchSelection(event.target.value);
+    });
+    ["login-id", "login-pw"].forEach((id) => {
+        const input = document.getElementById(id);
+        input.addEventListener("input", () => syncCenteredInputWidth(input));
+        syncCenteredInputWidth(input);
     });
     document.getElementById("btn-login").addEventListener("click", handleLogin);
     document.getElementById("btn-toggle-password").addEventListener("click", togglePasswordVisibility);

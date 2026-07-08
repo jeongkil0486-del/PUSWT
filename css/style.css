@@ -638,9 +638,9 @@ button {
 
 .brand-mark img {
     display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    width: 84%;
+    height: 84%;
+    object-fit: contain;
     object-position: center center;
 }
 
@@ -752,7 +752,7 @@ button {
     box-shadow: 0 0 0 4px rgba(47, 113, 255, 0.12), 0 8px 18px rgba(11, 40, 98, 0.1);
 }
 
-.control-leading,
+.control-balance,
 .control-trailing {
     width: var(--login-control-slot-width);
     height: 100%;
@@ -762,7 +762,7 @@ button {
     color: #7c88a5;
 }
 
-.control-leading svg,
+.control-inline-icon svg,
 .control-trailing svg {
     width: var(--login-control-icon-size);
     height: var(--login-control-icon-size);
@@ -770,15 +770,15 @@ button {
     transform: none;
 }
 
-.control-leading-branch svg {
+.control-inline-branch svg {
     transform: translateY(0.5px);
 }
 
-.control-leading-user svg {
+.control-inline-user svg {
     transform: translateY(0.5px);
 }
 
-.control-leading-lock svg {
+.control-inline-lock svg {
     transform: translateY(0.5px);
 }
 
@@ -797,8 +797,34 @@ button {
     align-items: center;
 }
 
+.control-body-centered {
+    justify-content: center;
+}
+
+.control-content {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    max-width: 100%;
+    gap: 12px;
+}
+
+.control-content-select {
+    color: #22304d;
+}
+
+.control-inline-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--login-control-icon-size);
+    height: var(--login-control-icon-size);
+    color: #7c88a5;
+}
+
 .control-input {
-    width: 100%;
     min-width: 0;
     height: auto;
     margin: 0;
@@ -815,14 +841,27 @@ button {
     -moz-appearance: none;
 }
 
+.control-input-centered {
+    text-align: center;
+}
+
+.control-input-id {
+    width: 4ch;
+}
+
+.control-input-password {
+    width: 11ch;
+}
+
 .control-input::placeholder {
     color: #7f8ba7;
     opacity: 1;
 }
 
 .control-display {
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
     color: #22304d;
     pointer-events: none;
     transform: translateY(0.5px);

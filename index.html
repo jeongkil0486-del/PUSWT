@@ -12,7 +12,7 @@
     <link rel="icon" sizes="192x192" href="assets/app-icon.png">
     <title>TAS Walkie-Talkie</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="css/style.css?v=20260708-ui-5">
+    <link rel="stylesheet" href="css/style.css?v=20260708-ui-6">
 </head>
 <body>
 
@@ -55,14 +55,17 @@
             <div class="field-group">
                 <label class="field-label" for="branch-select">지점 선택</label>
                 <div class="control-row select-row">
-                    <span class="control-leading control-leading-branch" aria-hidden="true">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M12 21s7-6.15 7-12a7 7 0 10-14 0c0 5.85 7 12 7 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
-                            <circle cx="12" cy="9" r="2.3" fill="none" stroke="currentColor" stroke-width="2"></circle>
-                        </svg>
-                    </span>
-                    <span class="control-body">
-                        <span id="branch-select-display" class="control-input control-display" aria-hidden="true"></span>
+                    <span class="control-balance" aria-hidden="true"></span>
+                    <span class="control-body control-body-centered">
+                        <span class="control-content control-content-select">
+                            <span class="control-inline-icon control-inline-branch" aria-hidden="true">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 21s7-6.15 7-12a7 7 0 10-14 0c0 5.85 7 12 7 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
+                                    <circle cx="12" cy="9" r="2.3" fill="none" stroke="currentColor" stroke-width="2"></circle>
+                                </svg>
+                            </span>
+                            <span id="branch-select-display" class="control-input control-display" aria-hidden="true"></span>
+                        </span>
                     </span>
                     <select id="branch-select" class="control-native-select" aria-label="지점 선택"></select>
                     <span class="control-trailing control-chevron" aria-hidden="true">
@@ -76,14 +79,17 @@
             <div class="field-group">
                 <label class="sr-only" for="login-id">ID</label>
                 <div class="control-row">
-                    <span class="control-leading control-leading-user" aria-hidden="true">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M12 12a4 4 0 100-8 4 4 0 000 8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                            <path d="M4 20a8 8 0 0116 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                        </svg>
-                    </span>
-                    <span class="control-body">
-                        <input type="text" id="login-id" class="control-input login-input" placeholder="ID">
+                    <span class="control-balance" aria-hidden="true"></span>
+                    <span class="control-body control-body-centered">
+                        <span class="control-content control-content-id">
+                            <span class="control-inline-icon control-inline-user" aria-hidden="true">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 12a4 4 0 100-8 4 4 0 000 8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                                    <path d="M4 20a8 8 0 0116 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                                </svg>
+                            </span>
+                            <input type="text" id="login-id" class="control-input control-input-centered control-input-id login-input" placeholder="ID" data-base-length="2">
+                        </span>
                     </span>
                     <span class="control-trailing control-trailing-blank" aria-hidden="true"></span>
                 </div>
@@ -92,14 +98,17 @@
             <div class="field-group">
                 <label class="sr-only" for="login-pw">Password</label>
                 <div class="control-row">
-                    <span class="control-leading control-leading-lock" aria-hidden="true">
-                        <svg viewBox="0 0 24 24">
-                            <rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
-                            <path d="M8 11V8a4 4 0 118 0v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                        </svg>
-                    </span>
-                    <span class="control-body">
-                        <input type="password" id="login-pw" class="control-input login-input" placeholder="Password">
+                    <span class="control-balance" aria-hidden="true"></span>
+                    <span class="control-body control-body-centered">
+                        <span class="control-content control-content-password">
+                            <span class="control-inline-icon control-inline-lock" aria-hidden="true">
+                                <svg viewBox="0 0 24 24">
+                                    <rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="2"></rect>
+                                    <path d="M8 11V8a4 4 0 118 0v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                                </svg>
+                            </span>
+                            <input type="password" id="login-pw" class="control-input control-input-centered control-input-password login-input" placeholder="Password" data-base-length="8">
+                        </span>
                     </span>
                     <button type="button" id="btn-toggle-password" class="control-trailing control-trailing-eye password-toggle" aria-label="비밀번호 보기 전환">
                         <svg viewBox="0 0 24 24">
