@@ -920,14 +920,14 @@ button {
         overflow-x: hidden;
     }
 
-    /* ── 번호 그리드: 4칸→3칸으로 축소 (모바일에서 잘림 방지) ── */
+    /* ── 번호 그리드: 4열 유지 (기존과 동일) ── */
     .grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 8px;
     }
 
     #admin-number-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 5px;
     }
 
@@ -1064,20 +1064,20 @@ button {
     }
 }
 
-/* ── 아주 작은 화면(360px 이하)에서 2칸 그리드 ── */
+/* ── 아주 작은 화면(360px 이하)에서도 4열 유지 ── */
 @media (max-width: 360px) {
     .grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 6px;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 5px;
     }
 
     #admin-number-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 4px;
     }
 
     .number-box {
-        font-size: 14px;
+        font-size: 12px;
     }
 }
 
