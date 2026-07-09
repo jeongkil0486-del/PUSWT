@@ -157,9 +157,14 @@ export async function resetAllPasswords() {
         }
 
         const names = Object.keys(whitelistSnap.val());
+        // users/ 비밀번호 삭제
         const tasks = names.map((name) => remove(dbRef(`users/${name}`)));
         await Promise.all(tasks);
-        alert(`총 ${names.length}명의 비밀번호가 전체 초기화되었습니다.`);
+
+        // system/resetRequests 전체 삭제 — 이게 빠져서 T239232 같은 항목이 계속 남았던 원인
+        await remove(dbRef("system/resetRequests"));
+
+        alert(`총 ${names.length}명의 비밀번호가 전체 초기화되었습니다.\n(초기화 요청 대기 목록도 함께 초기화되었습니다.)`);
     } catch (error) {
         console.error("전체 PW 초기화 오류:", error);
         alert("초기화 실패. 다시 시도해주세요.");
@@ -258,22 +263,27 @@ export async function requestPasswordReset() {
 export function listenToResetRequests() {
     onValue(dbRef("system/resetRequests"), (snap) => {
         const badge = document.getElementById("reset-badge");
-        // 항상 Firebase 실시간 데이터만 기준으로 표시 — 로컬 캐시/이전 state 사용 안 함
-        if (snap.exists()) {
-            const data = snap.val();
-            // true 값을 가진 항목만 유효한 요청으로 간주
-            const pendingNames = Object.entries(data)
-                .filter(([, v]) => v === true)
-                .map(([name]) => name);
-            state.pendingResets = pendingNames;
-            if (pendingNames.length > 0) {
-                badge.innerText = pendingNames.length;
-                badge.style.display = "inline-block";
-            } else {
-                badge.style.display = "none";
-            }
+
+        if (!snap.exists() || !snap.val()) {
+            // Firebase에 데이터 없음 = 요청 없음. 캐시/이전 state 절대 사용 안 함
+            state.pendingResets = [];
+            badge.style.display = "none";
+            return;
+        }
+
+        const data = snap.val();
+        // value가 정확히 true인 항목만 유효한 요청으로 간주
+        // key는 직원 이름(한글) or 사번이 될 수 있으나 실제 Firebase에 있는 값만 표시
+        const pendingNames = Object.entries(data)
+            .filter(([, v]) => v === true)
+            .map(([name]) => name);
+
+        state.pendingResets = pendingNames;
+
+        if (pendingNames.length > 0) {
+            badge.innerText = pendingNames.length;
+            badge.style.display = "inline-block";
         } else {
-            // 데이터 없으면 완전 초기화
             state.pendingResets = [];
             badge.style.display = "none";
         }
@@ -352,12 +362,14 @@ export async function deleteUser() {
 export async function resetUserPassword() {
     const id = document.getElementById("admin-target-user").value.trim();
     if (!id) {
+        // state.pendingResets는 Firebase 실시간 데이터 기준이므로 안전하게 표시
         if (state.pendingResets.length > 0) {
-            alert(`[현재 초기화 요청 대기자]\n- ${state.pendingResets.join("\n- ")}\n\n입력창에 이름을 적고 버튼을 누르시면 초기화됩니다.`);
+            // Firebase system/resetRequests 에 있는 이름만 표시
+            alert(`[현재 초기화 요청 대기자 (Firebase 기준)]\n- ${state.pendingResets.join("\n- ")}\n\n위 이름을 입력창에 적고 [초기화] 버튼을 누르세요.`);
             return;
         }
 
-        alert("초기화할 직원 이름을 입력하세요.");
+        alert("초기화할 직원 이름을 입력하세요.\n(현재 대기 중인 초기화 요청이 없습니다.)");
         return;
     }
 

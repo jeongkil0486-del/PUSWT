@@ -896,14 +896,121 @@ button {
         --login-control-gap: 10px;
     }
 
+    /* ── 모바일 기본: 가로 스크롤 완전 차단 ── */
+    html, body {
+        overflow-x: hidden;
+        width: 100%;
+    }
+
+    #app-container {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* ── 메인/관리자 화면 패딩 축소 ── */
+    #main-screen,
+    #admin-screen {
+        padding: 12px;
+        width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* ── 번호 그리드: 4칸→3칸으로 축소 (모바일에서 잘림 방지) ── */
+    .grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+
+    #admin-number-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 5px;
+    }
+
+    /* ── 번호 박스 폰트 크기 조정 ── */
+    .number-box {
+        font-size: 16px;
+        border-radius: 12px;
+    }
+
+    /* ── controls-top: 날짜 + 버튼행을 세로로 쌓되 버튼행은 한 줄 유지 ── */
+    .controls-top {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .date-display {
+        text-align: center;
+    }
+
+    /* 호출/수정/전체반납 버튼행: 가로 유지 */
+    .control-button-row {
+        width: 100%;
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+
+    .control-button-row .btn {
+        flex: 1;
+        padding: 10px 4px;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    /* 본인/크루/충전중 버튼행 */
+    .mode-button-row {
+        width: 100%;
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+
+    .mode-button-row .btn {
+        flex: 1;
+        padding: 10px 4px;
+        font-size: 13px;
+    }
+
+    /* ── 관리자 input/action 영역 ── */
+    .admin-input-row {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .admin-input-row .input-field {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .action-group {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .action-group .btn {
+        flex: 1 1 calc(50% - 6px);
+        min-width: 0;
+        padding: 10px 6px;
+        font-size: 12px;
+    }
+
+    /* ── 플로팅/외부 요소 위치 ── */
+    .seat-names-panel-overlay {
+        padding: 8px;
+        align-items: flex-end;
+    }
+
+    .seat-names-panel-box {
+        max-height: 85vh;
+        border-radius: 18px 18px 0 0;
+    }
+
+    /* ── 로그인 화면 ── */
     .login-screen {
         padding: 18px 14px 14px;
         gap: 10px;
-    }
-
-    #main-screen,
-    #admin-screen {
-        padding: 16px;
     }
 
     .brand-mark {
@@ -951,22 +1058,22 @@ button {
     .login-version {
         font-size: 11px;
     }
+}
 
-    .controls-top,
-    .admin-input-row,
-    .action-group {
-        flex-direction: column;
+/* ── 아주 작은 화면(360px 이하)에서 2칸 그리드 ── */
+@media (max-width: 360px) {
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
     }
 
-    .control-button-row,
-    .mode-button-row {
-        width: 100%;
-        flex-wrap: wrap;
+    #admin-number-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
     }
 
-    .control-button-row .btn,
-    .action-group .btn {
-        flex: 1 1 auto;
+    .number-box {
+        font-size: 14px;
     }
 }
 
