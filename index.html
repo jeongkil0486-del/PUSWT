@@ -202,12 +202,37 @@
             </div>
 
             <div class="admin-section">
+                <h3>번호 표시명 설정</h3>
+                <p style="font-size:13px;color:#666;margin:0 0 8px;">지점별로 각 번호에 표시 이름을 설정합니다. 저장 즉시 직원 화면에 반영됩니다.</p>
+                <button id="btn-seat-names" class="btn btn-primary admin-full-btn">번호명 설정 열기</button>
+            </div>
+
+            <div class="admin-section">
                 <h3>일별 사용 기록 다운로드</h3>
                 <div class="admin-input-row">
                     <input type="date" id="export-date" class="input-field admin-date-input">
                     <button id="btn-export-excel" class="btn btn-primary btn-export">추출</button>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- 번호명 설정 패널 (전체화면 팝업) -->
+<div id="seat-names-panel" class="hidden seat-names-panel-overlay">
+    <div class="seat-names-panel-box">
+        <div class="seat-names-panel-header">
+            <span>번호 표시명 설정</span>
+            <button id="btn-seat-names-close" class="sn-close-btn">✕</button>
+        </div>
+        <p class="sn-guide">
+            각 번호에 표시할 이름을 입력하세요. 비워두면 숫자 그대로 표시됩니다.<br>
+            ⠿ 드래그로 순서 변경 / 👁 버튼으로 숨김 설정 가능합니다.
+        </p>
+        <div id="seat-names-editor" class="seat-names-editor"></div>
+        <div class="sn-footer">
+            <button id="btn-seat-names-reset" class="btn btn-secondary">기본값 복원</button>
+            <button id="btn-seat-names-save" class="btn btn-primary">저장 (즉시 반영)</button>
         </div>
     </div>
 </div>

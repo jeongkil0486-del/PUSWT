@@ -102,7 +102,8 @@ export const state = {
     currentUserAlarmSenders: new Set(),
     currentAlarmSenders: new Set(),
     todayString: "",
-    currentBranch: DEFAULT_BRANCH
+    currentBranch: DEFAULT_BRANCH,
+    seatNames: {}   // { "1": "여객1", "2": "크루2", ... }
 };
 
 export const screens = {

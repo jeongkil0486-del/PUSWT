@@ -9,6 +9,7 @@ function formatElapsedTime(elapsed) {
 
 export function registerAdminGlobals() {
     window.dismissAlarm = dismissAlarm;
+    window.dismissAlarmBySender = dismissAlarmBySender;
 }
 
 export function listenToAdminBoard() {
@@ -22,6 +23,9 @@ export function listenToAdminBoard() {
         const total = data.config?.totalNumbers || 20;
         const disabled = data.config?.disabledNumbers || {};
         const occupied = data.boardState?.numbers || {};
+        // seatNames, seatOrder 실시간 반영
+        state.seatNames = data.config?.seatNames || {};
+        state.seatOrder = data.config?.seatOrder || [];
 
         renderGrid(adminGrid, total, disabled, occupied, {
             isAdminView: true,
@@ -75,10 +79,28 @@ export function listenToUserAlarms() {
 
         const allAlarms = snap.val();
         const now = Date.now();
-        const active = Object.entries(allAlarms)
+
+        // 5분 이상 지난 항목은 Firebase에서 자동 dismissed 처리
+        const expiredKeys = Object.entries(allAlarms)
+            .filter(([, v]) => !v.dismissed && now - v.timestamp >= fiveMin)
+            .map(([key]) => key);
+        if (expiredKeys.length > 0) {
+            expiredKeys.forEach((key) => update(dbRef(`system/userAlarms/${key}`), { dismissed: true }));
+        }
+
+        // dismissed 아니고 5분 미만인 항목만, sender별 가장 최신 1개만 표시
+        const allActive = Object.entries(allAlarms)
             .map(([key, value]) => ({ key, ...value }))
             .filter((alarm) => !alarm.dismissed && now - alarm.timestamp < fiveMin)
             .sort((a, b) => b.timestamp - a.timestamp);
+
+        // sender별 중복 제거 — 가장 최신 1건만 남김
+        const seenSenders = new Set();
+        const active = allActive.filter((alarm) => {
+            if (seenSenders.has(alarm.sender)) return false;
+            seenSenders.add(alarm.sender);
+            return true;
+        });
 
         if (active.length === 0) {
             alarmBanner.classList.add("hidden");
@@ -89,7 +111,7 @@ export function listenToUserAlarms() {
         alarmList.innerHTML = active.map((alarm) => (
             `<div style="padding:4px 0; border-bottom:1px solid #ffd0d0; display:flex; justify-content:space-between; align-items:center;">
                 <span>&#128276; <b>${alarm.sender}</b> (${formatElapsedTime(now - alarm.timestamp)})</span>
-                <button onclick="dismissAlarm('${alarm.key}')" style="background:#8e8e93;color:#fff;border:none;border-radius:3px;padding:2px 8px;font-size:11px;cursor:pointer;">끄기</button>
+                <button onclick="dismissAlarmBySender('${alarm.sender}')" style="background:#8e8e93;color:#fff;border:none;border-radius:3px;padding:2px 8px;font-size:11px;cursor:pointer;">끄기</button>
             </div>`
         )).join("");
 
@@ -97,6 +119,21 @@ export function listenToUserAlarms() {
         alarmBanner.classList.remove("hidden");
         applyAlarmBlinkToBoxes(state.currentAlarmSenders);
     });
+}
+
+// sender 기준으로 해당 사람의 모든 알림을 dismissed 처리
+export async function dismissAlarmBySender(sender) {
+    try {
+        const snap = await get(dbRef("system/userAlarms"));
+        if (!snap.exists()) return;
+        const all = snap.val();
+        const tasks = Object.entries(all)
+            .filter(([, v]) => v.sender === sender && !v.dismissed)
+            .map(([key]) => update(dbRef(`system/userAlarms/${key}`), { dismissed: true }));
+        await Promise.all(tasks);
+    } catch (error) {
+        console.error("알림 끄기 실패:", error);
+    }
 }
 
 export async function dismissAlarm(key) {
@@ -120,9 +157,14 @@ export async function resetAllPasswords() {
         }
 
         const names = Object.keys(whitelistSnap.val());
+        // users/ 비밀번호 삭제
         const tasks = names.map((name) => remove(dbRef(`users/${name}`)));
         await Promise.all(tasks);
-        alert(`총 ${names.length}명의 비밀번호가 전체 초기화되었습니다.`);
+
+        // system/resetRequests 전체 삭제 — 이게 빠져서 T239232 같은 항목이 계속 남았던 원인
+        await remove(dbRef("system/resetRequests"));
+
+        alert(`총 ${names.length}명의 비밀번호가 전체 초기화되었습니다.\n(초기화 요청 대기 목록도 함께 초기화되었습니다.)`);
     } catch (error) {
         console.error("전체 PW 초기화 오류:", error);
         alert("초기화 실패. 다시 시도해주세요.");
@@ -221,19 +263,30 @@ export async function requestPasswordReset() {
 export function listenToResetRequests() {
     onValue(dbRef("system/resetRequests"), (snap) => {
         const badge = document.getElementById("reset-badge");
-        if (snap.exists()) {
-            state.pendingResets = Object.keys(snap.val());
-            if (state.pendingResets.length > 0) {
-                badge.innerText = state.pendingResets.length;
-                badge.style.display = "inline-block";
-            } else {
-                badge.style.display = "none";
-            }
+
+        if (!snap.exists() || !snap.val()) {
+            // Firebase에 데이터 없음 = 요청 없음. 캐시/이전 state 절대 사용 안 함
+            state.pendingResets = [];
+            badge.style.display = "none";
             return;
         }
 
-        state.pendingResets = [];
-        badge.style.display = "none";
+        const data = snap.val();
+        // value가 정확히 true인 항목만 유효한 요청으로 간주
+        // key는 직원 이름(한글) or 사번이 될 수 있으나 실제 Firebase에 있는 값만 표시
+        const pendingNames = Object.entries(data)
+            .filter(([, v]) => v === true)
+            .map(([name]) => name);
+
+        state.pendingResets = pendingNames;
+
+        if (pendingNames.length > 0) {
+            badge.innerText = pendingNames.length;
+            badge.style.display = "inline-block";
+        } else {
+            state.pendingResets = [];
+            badge.style.display = "none";
+        }
     });
 }
 
@@ -309,12 +362,14 @@ export async function deleteUser() {
 export async function resetUserPassword() {
     const id = document.getElementById("admin-target-user").value.trim();
     if (!id) {
+        // state.pendingResets는 Firebase 실시간 데이터 기준이므로 안전하게 표시
         if (state.pendingResets.length > 0) {
-            alert(`[현재 초기화 요청 대기자]\n- ${state.pendingResets.join("\n- ")}\n\n입력창에 이름을 적고 버튼을 누르시면 초기화됩니다.`);
+            // Firebase system/resetRequests 에 있는 이름만 표시
+            alert(`[현재 초기화 요청 대기자 (Firebase 기준)]\n- ${state.pendingResets.join("\n- ")}\n\n위 이름을 입력창에 적고 [초기화] 버튼을 누르세요.`);
             return;
         }
 
-        alert("초기화할 직원 이름을 입력하세요.");
+        alert("초기화할 직원 이름을 입력하세요.\n(현재 대기 중인 초기화 요청이 없습니다.)");
         return;
     }
 
@@ -379,5 +434,162 @@ export async function sendGlobalAlarm() {
         alert("미반납자 전체에게 퇴근 경고 알람이 전송되었습니다.");
     } catch (error) {
         alert("알람 전송 실패.");
+    }
+}
+
+// ─────────────────────────────────────────────
+// 번호명 설정 기능
+// ─────────────────────────────────────────────
+
+let seatNameDragSrc = null; // 드래그 소스 인덱스
+
+export function openSeatNamesPanel() {
+    const panel = document.getElementById("seat-names-panel");
+    if (!panel) return;
+    panel.classList.remove("hidden");
+    renderSeatNamesEditor();
+}
+
+export function closeSeatNamesPanel() {
+    const panel = document.getElementById("seat-names-panel");
+    if (panel) panel.classList.add("hidden");
+}
+
+export async function renderSeatNamesEditor() {
+    const container = document.getElementById("seat-names-editor");
+    if (!container) return;
+
+    // Firebase에서 최신 데이터 읽기
+    let total = 20;
+    let currentNames = {};
+    let hiddenNums = {};
+    let order = [];
+
+    try {
+        const snap = await get(dbRef("system/config"));
+        if (snap.exists()) {
+            const cfg = snap.val();
+            total = cfg.totalNumbers || 20;
+            currentNames = cfg.seatNames || {};
+            hiddenNums = cfg.hiddenNumbers || {};
+            order = cfg.seatOrder || [];
+        }
+    } catch (e) {
+        console.error("번호명 로딩 실패:", e);
+    }
+
+    // order가 없으면 기본 순서 생성
+    if (!order.length) {
+        order = Array.from({ length: total }, (_, i) => i + 1);
+    } else {
+        // total 변경 시 새 번호 추가 / 초과 번호 제거
+        for (let i = 1; i <= total; i++) {
+            if (!order.includes(i)) order.push(i);
+        }
+        order = order.filter(n => n >= 1 && n <= total);
+    }
+
+    container.innerHTML = order.map((num, idx) => {
+        const name = currentNames[String(num)] || "";
+        const isHidden = !!hiddenNums[String(num)];
+        return `
+        <div class="sn-row ${isHidden ? "sn-hidden" : ""}" data-idx="${idx}" data-num="${num}"
+             draggable="true"
+             ondragstart="window._snDragStart(event, ${idx})"
+             ondragover="window._snDragOver(event)"
+             ondrop="window._snDrop(event, ${idx})">
+            <span class="sn-handle" title="드래그로 순서변경">⠿</span>
+            <span class="sn-num">${num}번</span>
+            <input class="sn-input" type="text" value="${name}" placeholder="표시 이름 (비우면 숫자)" data-num="${num}" maxlength="10">
+            <button class="sn-toggle-btn" onclick="window._snToggleHide(${num}, ${isHidden})" title="${isHidden ? "표시" : "숨김"}">
+                ${isHidden ? "🙈 숨김" : "👁 표시"}
+            </button>
+        </div>`;
+    }).join("");
+
+    // 드래그 순서 변경
+    window._snDragStart = (e, idx) => {
+        seatNameDragSrc = idx;
+        e.dataTransfer.effectAllowed = "move";
+    };
+    window._snDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+    };
+    window._snDrop = (e, toIdx) => {
+        e.preventDefault();
+        if (seatNameDragSrc === null || seatNameDragSrc === toIdx) return;
+        const rows = [...container.querySelectorAll(".sn-row")];
+        const fromEl = rows[seatNameDragSrc];
+        const toEl = rows[toIdx];
+        if (seatNameDragSrc < toIdx) {
+            container.insertBefore(fromEl, toEl.nextSibling);
+        } else {
+            container.insertBefore(fromEl, toEl);
+        }
+        seatNameDragSrc = null;
+    };
+
+    // 숨김 토글 (즉시 저장)
+    window._snToggleHide = async (num, currentlyHidden) => {
+        try {
+            const snap = await get(dbRef("system/config"));
+            const cfg = snap.exists() ? snap.val() : {};
+            const hidden = cfg.hiddenNumbers || {};
+            if (currentlyHidden) {
+                delete hidden[String(num)];
+            } else {
+                hidden[String(num)] = true;
+            }
+            await update(dbRef("system/config"), { hiddenNumbers: hidden });
+            await renderSeatNamesEditor();
+        } catch (e) {
+            alert("숨김 상태 변경 실패.");
+        }
+    };
+}
+
+export async function saveSeatNames() {
+    const container = document.getElementById("seat-names-editor");
+    if (!container) return;
+
+    const rows = [...container.querySelectorAll(".sn-row")];
+    const newNames = {};
+    const newOrder = [];
+
+    rows.forEach(row => {
+        const num = parseInt(row.dataset.num, 10);
+        const input = row.querySelector(".sn-input");
+        const val = input ? input.value.trim() : "";
+        newOrder.push(num);
+        if (val) {
+            newNames[String(num)] = val;
+        }
+    });
+
+    try {
+        await update(dbRef("system/config"), {
+            seatNames: newNames,
+            seatOrder: newOrder
+        });
+        alert("번호명이 저장되었습니다. 직원 화면에 즉시 반영됩니다.");
+    } catch (e) {
+        alert("저장 실패. 다시 시도해주세요.");
+        console.error(e);
+    }
+}
+
+export async function resetSeatNames() {
+    if (!confirm("모든 번호명을 초기화(기본 숫자)하시겠습니까?")) return;
+    try {
+        await update(dbRef("system/config"), {
+            seatNames: {},
+            seatOrder: [],
+            hiddenNumbers: {}
+        });
+        alert("번호명이 초기화되었습니다.");
+        await renderSeatNamesEditor();
+    } catch (e) {
+        alert("초기화 실패.");
     }
 }
