@@ -281,6 +281,10 @@ button {
     background-color: #fff;
     box-shadow: 0 8px 18px rgba(25, 41, 79, 0.06);
     transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+    /* seat-label 등 자식 요소가 박스를 늘리지 못하도록 */
+    overflow: hidden;
+    min-width: 0;
+    min-height: 0;
 }
 
 .number-box:hover {
@@ -1082,16 +1086,17 @@ button {
    번호명이 있으면 이름만, 없으면 숫자만 표시
 ───────────────────────────────────────── */
 .number-box .seat-label {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
+    /* 박스 크기/aspect-ratio/grid 레이아웃에 영향 없음 */
+    display: block;
     font-size: 13px;
     font-weight: 700;
-    line-height: 1.2;
+    line-height: 1.3;
     word-break: keep-all;
     text-align: center;
+    padding: 0 2px;
+    /* 글자가 길면 박스 안에서만 줄바꿈, 박스 자체는 절대 커지지 않음 */
+    overflow-wrap: break-word;
+    max-width: 100%;
 }
 
 /* ─────────────────────────────────────────
