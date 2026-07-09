@@ -972,19 +972,19 @@ button {
 
 /* ─────────────────────────────────────────
    번호 박스 seatName 표시
+   번호명이 있으면 이름만, 없으면 숫자만 표시
 ───────────────────────────────────────── */
-.number-box .seat-num {
-    display: block;
-    font-size: 11px;
-    opacity: 0.6;
-    line-height: 1;
-}
 .number-box .seat-label {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
     font-size: 13px;
     font-weight: 700;
     line-height: 1.2;
     word-break: keep-all;
+    text-align: center;
 }
 
 /* ─────────────────────────────────────────

@@ -128,10 +128,10 @@ export function renderGrid(gridElement, totalNumbers, disabledNumbers, numbers, 
         const box = document.createElement("div");
         box.className = "number-box";
 
-        // seatName이 있으면 이름 표시, 없으면 번호
+        // seatName이 있으면 이름만 표시, 없으면 번호만 표시 (숫자 중복 표시 없음)
         const seatLabel = state.seatNames[String(i)];
         if (seatLabel) {
-            box.innerHTML = `<span class="seat-num">${i}</span><span class="seat-label">${seatLabel}</span>`;
+            box.innerHTML = `<span class="seat-label">${seatLabel}</span>`;
         } else {
             box.innerText = i;
         }

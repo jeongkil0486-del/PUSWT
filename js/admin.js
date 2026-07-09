@@ -9,6 +9,7 @@ function formatElapsedTime(elapsed) {
 
 export function registerAdminGlobals() {
     window.dismissAlarm = dismissAlarm;
+    window.dismissAlarmBySender = dismissAlarmBySender;
 }
 
 export function listenToAdminBoard() {
@@ -78,10 +79,28 @@ export function listenToUserAlarms() {
 
         const allAlarms = snap.val();
         const now = Date.now();
-        const active = Object.entries(allAlarms)
+
+        // 5분 이상 지난 항목은 Firebase에서 자동 dismissed 처리
+        const expiredKeys = Object.entries(allAlarms)
+            .filter(([, v]) => !v.dismissed && now - v.timestamp >= fiveMin)
+            .map(([key]) => key);
+        if (expiredKeys.length > 0) {
+            expiredKeys.forEach((key) => update(dbRef(`system/userAlarms/${key}`), { dismissed: true }));
+        }
+
+        // dismissed 아니고 5분 미만인 항목만, sender별 가장 최신 1개만 표시
+        const allActive = Object.entries(allAlarms)
             .map(([key, value]) => ({ key, ...value }))
             .filter((alarm) => !alarm.dismissed && now - alarm.timestamp < fiveMin)
             .sort((a, b) => b.timestamp - a.timestamp);
+
+        // sender별 중복 제거 — 가장 최신 1건만 남김
+        const seenSenders = new Set();
+        const active = allActive.filter((alarm) => {
+            if (seenSenders.has(alarm.sender)) return false;
+            seenSenders.add(alarm.sender);
+            return true;
+        });
 
         if (active.length === 0) {
             alarmBanner.classList.add("hidden");
@@ -92,7 +111,7 @@ export function listenToUserAlarms() {
         alarmList.innerHTML = active.map((alarm) => (
             `<div style="padding:4px 0; border-bottom:1px solid #ffd0d0; display:flex; justify-content:space-between; align-items:center;">
                 <span>&#128276; <b>${alarm.sender}</b> (${formatElapsedTime(now - alarm.timestamp)})</span>
-                <button onclick="dismissAlarm('${alarm.key}')" style="background:#8e8e93;color:#fff;border:none;border-radius:3px;padding:2px 8px;font-size:11px;cursor:pointer;">끄기</button>
+                <button onclick="dismissAlarmBySender('${alarm.sender}')" style="background:#8e8e93;color:#fff;border:none;border-radius:3px;padding:2px 8px;font-size:11px;cursor:pointer;">끄기</button>
             </div>`
         )).join("");
 
@@ -100,6 +119,21 @@ export function listenToUserAlarms() {
         alarmBanner.classList.remove("hidden");
         applyAlarmBlinkToBoxes(state.currentAlarmSenders);
     });
+}
+
+// sender 기준으로 해당 사람의 모든 알림을 dismissed 처리
+export async function dismissAlarmBySender(sender) {
+    try {
+        const snap = await get(dbRef("system/userAlarms"));
+        if (!snap.exists()) return;
+        const all = snap.val();
+        const tasks = Object.entries(all)
+            .filter(([, v]) => v.sender === sender && !v.dismissed)
+            .map(([key]) => update(dbRef(`system/userAlarms/${key}`), { dismissed: true }));
+        await Promise.all(tasks);
+    } catch (error) {
+        console.error("알림 끄기 실패:", error);
+    }
 }
 
 export async function dismissAlarm(key) {
@@ -224,19 +258,25 @@ export async function requestPasswordReset() {
 export function listenToResetRequests() {
     onValue(dbRef("system/resetRequests"), (snap) => {
         const badge = document.getElementById("reset-badge");
+        // 항상 Firebase 실시간 데이터만 기준으로 표시 — 로컬 캐시/이전 state 사용 안 함
         if (snap.exists()) {
-            state.pendingResets = Object.keys(snap.val());
-            if (state.pendingResets.length > 0) {
-                badge.innerText = state.pendingResets.length;
+            const data = snap.val();
+            // true 값을 가진 항목만 유효한 요청으로 간주
+            const pendingNames = Object.entries(data)
+                .filter(([, v]) => v === true)
+                .map(([name]) => name);
+            state.pendingResets = pendingNames;
+            if (pendingNames.length > 0) {
+                badge.innerText = pendingNames.length;
                 badge.style.display = "inline-block";
             } else {
                 badge.style.display = "none";
             }
-            return;
+        } else {
+            // 데이터 없으면 완전 초기화
+            state.pendingResets = [];
+            badge.style.display = "none";
         }
-
-        state.pendingResets = [];
-        badge.style.display = "none";
     });
 }
 
