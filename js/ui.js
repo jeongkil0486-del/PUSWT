@@ -118,11 +118,23 @@ export function logoutAction() {
 export function renderGrid(gridElement, totalNumbers, disabledNumbers, numbers, options = {}) {
     const { isAdminView = false, onAdminClear, onToggleNumber } = options;
 
+    // 순서 배열: seatOrder가 있으면 사용, 없으면 기본 순서
+    const order = (state.seatOrder && state.seatOrder.length)
+        ? state.seatOrder.filter(n => n >= 1 && n <= totalNumbers)
+        : Array.from({ length: totalNumbers }, (_, i) => i + 1);
+
     gridElement.innerHTML = "";
-    for (let i = 1; i <= totalNumbers; i += 1) {
+    for (const i of order) {
         const box = document.createElement("div");
         box.className = "number-box";
-        box.innerText = i;
+
+        // seatName이 있으면 이름 표시, 없으면 번호
+        const seatLabel = state.seatNames[String(i)];
+        if (seatLabel) {
+            box.innerHTML = `<span class="seat-num">${i}</span><span class="seat-label">${seatLabel}</span>`;
+        } else {
+            box.innerText = i;
+        }
 
         if (disabledNumbers[i]) {
             box.classList.add("disabled");
@@ -219,9 +231,16 @@ export function listenToBoard() {
         const data = snapshot.val();
         const total = data.config?.totalNumbers || 20;
         const disabled = data.config?.disabledNumbers || {};
+        const hidden = data.config?.hiddenNumbers || {};
         state.currentBoardNumbers = data.boardState?.numbers || {};
+        // seatNames 실시간 반영 (지점별)
+        state.seatNames = data.config?.seatNames || {};
+        state.seatOrder = data.config?.seatOrder || [];
 
-        renderGrid(grid, total, disabled, state.currentBoardNumbers, {
+        // hiddenNumbers는 disabled처럼 처리 (합산)
+        const mergedDisabled = { ...disabled, ...hidden };
+
+        renderGrid(grid, total, mergedDisabled, state.currentBoardNumbers, {
             onToggleNumber: toggleNumber
         });
 

@@ -48,7 +48,11 @@ import {
     resetUserPassword,
     updateTotalNumbers,
     toggleDisableNumber,
-    sendGlobalAlarm
+    sendGlobalAlarm,
+    openSeatNamesPanel,
+    closeSeatNamesPanel,
+    saveSeatNames,
+    resetSeatNames
 } from "./admin.js";
 import { exportExcel } from "./excel.js";
 
@@ -232,6 +236,10 @@ function bindEvents() {
     document.getElementById("btn-toggle-disable").addEventListener("click", toggleDisableNumber);
     document.getElementById("btn-send-alarm").addEventListener("click", sendGlobalAlarm);
     document.getElementById("btn-export-excel").addEventListener("click", exportExcel);
+    document.getElementById("btn-seat-names").addEventListener("click", openSeatNamesPanel);
+    document.getElementById("btn-seat-names-close").addEventListener("click", closeSeatNamesPanel);
+    document.getElementById("btn-seat-names-save").addEventListener("click", saveSeatNames);
+    document.getElementById("btn-seat-names-reset").addEventListener("click", resetSeatNames);
 }
 
 async function restoreAutoLogin() {

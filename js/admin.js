@@ -22,6 +22,9 @@ export function listenToAdminBoard() {
         const total = data.config?.totalNumbers || 20;
         const disabled = data.config?.disabledNumbers || {};
         const occupied = data.boardState?.numbers || {};
+        // seatNames, seatOrder 실시간 반영
+        state.seatNames = data.config?.seatNames || {};
+        state.seatOrder = data.config?.seatOrder || [];
 
         renderGrid(adminGrid, total, disabled, occupied, {
             isAdminView: true,
@@ -379,5 +382,162 @@ export async function sendGlobalAlarm() {
         alert("미반납자 전체에게 퇴근 경고 알람이 전송되었습니다.");
     } catch (error) {
         alert("알람 전송 실패.");
+    }
+}
+
+// ─────────────────────────────────────────────
+// 번호명 설정 기능
+// ─────────────────────────────────────────────
+
+let seatNameDragSrc = null; // 드래그 소스 인덱스
+
+export function openSeatNamesPanel() {
+    const panel = document.getElementById("seat-names-panel");
+    if (!panel) return;
+    panel.classList.remove("hidden");
+    renderSeatNamesEditor();
+}
+
+export function closeSeatNamesPanel() {
+    const panel = document.getElementById("seat-names-panel");
+    if (panel) panel.classList.add("hidden");
+}
+
+export async function renderSeatNamesEditor() {
+    const container = document.getElementById("seat-names-editor");
+    if (!container) return;
+
+    // Firebase에서 최신 데이터 읽기
+    let total = 20;
+    let currentNames = {};
+    let hiddenNums = {};
+    let order = [];
+
+    try {
+        const snap = await get(dbRef("system/config"));
+        if (snap.exists()) {
+            const cfg = snap.val();
+            total = cfg.totalNumbers || 20;
+            currentNames = cfg.seatNames || {};
+            hiddenNums = cfg.hiddenNumbers || {};
+            order = cfg.seatOrder || [];
+        }
+    } catch (e) {
+        console.error("번호명 로딩 실패:", e);
+    }
+
+    // order가 없으면 기본 순서 생성
+    if (!order.length) {
+        order = Array.from({ length: total }, (_, i) => i + 1);
+    } else {
+        // total 변경 시 새 번호 추가 / 초과 번호 제거
+        for (let i = 1; i <= total; i++) {
+            if (!order.includes(i)) order.push(i);
+        }
+        order = order.filter(n => n >= 1 && n <= total);
+    }
+
+    container.innerHTML = order.map((num, idx) => {
+        const name = currentNames[String(num)] || "";
+        const isHidden = !!hiddenNums[String(num)];
+        return `
+        <div class="sn-row ${isHidden ? "sn-hidden" : ""}" data-idx="${idx}" data-num="${num}"
+             draggable="true"
+             ondragstart="window._snDragStart(event, ${idx})"
+             ondragover="window._snDragOver(event)"
+             ondrop="window._snDrop(event, ${idx})">
+            <span class="sn-handle" title="드래그로 순서변경">⠿</span>
+            <span class="sn-num">${num}번</span>
+            <input class="sn-input" type="text" value="${name}" placeholder="표시 이름 (비우면 숫자)" data-num="${num}" maxlength="10">
+            <button class="sn-toggle-btn" onclick="window._snToggleHide(${num}, ${isHidden})" title="${isHidden ? "표시" : "숨김"}">
+                ${isHidden ? "🙈 숨김" : "👁 표시"}
+            </button>
+        </div>`;
+    }).join("");
+
+    // 드래그 순서 변경
+    window._snDragStart = (e, idx) => {
+        seatNameDragSrc = idx;
+        e.dataTransfer.effectAllowed = "move";
+    };
+    window._snDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+    };
+    window._snDrop = (e, toIdx) => {
+        e.preventDefault();
+        if (seatNameDragSrc === null || seatNameDragSrc === toIdx) return;
+        const rows = [...container.querySelectorAll(".sn-row")];
+        const fromEl = rows[seatNameDragSrc];
+        const toEl = rows[toIdx];
+        if (seatNameDragSrc < toIdx) {
+            container.insertBefore(fromEl, toEl.nextSibling);
+        } else {
+            container.insertBefore(fromEl, toEl);
+        }
+        seatNameDragSrc = null;
+    };
+
+    // 숨김 토글 (즉시 저장)
+    window._snToggleHide = async (num, currentlyHidden) => {
+        try {
+            const snap = await get(dbRef("system/config"));
+            const cfg = snap.exists() ? snap.val() : {};
+            const hidden = cfg.hiddenNumbers || {};
+            if (currentlyHidden) {
+                delete hidden[String(num)];
+            } else {
+                hidden[String(num)] = true;
+            }
+            await update(dbRef("system/config"), { hiddenNumbers: hidden });
+            await renderSeatNamesEditor();
+        } catch (e) {
+            alert("숨김 상태 변경 실패.");
+        }
+    };
+}
+
+export async function saveSeatNames() {
+    const container = document.getElementById("seat-names-editor");
+    if (!container) return;
+
+    const rows = [...container.querySelectorAll(".sn-row")];
+    const newNames = {};
+    const newOrder = [];
+
+    rows.forEach(row => {
+        const num = parseInt(row.dataset.num, 10);
+        const input = row.querySelector(".sn-input");
+        const val = input ? input.value.trim() : "";
+        newOrder.push(num);
+        if (val) {
+            newNames[String(num)] = val;
+        }
+    });
+
+    try {
+        await update(dbRef("system/config"), {
+            seatNames: newNames,
+            seatOrder: newOrder
+        });
+        alert("번호명이 저장되었습니다. 직원 화면에 즉시 반영됩니다.");
+    } catch (e) {
+        alert("저장 실패. 다시 시도해주세요.");
+        console.error(e);
+    }
+}
+
+export async function resetSeatNames() {
+    if (!confirm("모든 번호명을 초기화(기본 숫자)하시겠습니까?")) return;
+    try {
+        await update(dbRef("system/config"), {
+            seatNames: {},
+            seatOrder: [],
+            hiddenNumbers: {}
+        });
+        alert("번호명이 초기화되었습니다.");
+        await renderSeatNamesEditor();
+    } catch (e) {
+        alert("초기화 실패.");
     }
 }
