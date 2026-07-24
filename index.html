@@ -9,7 +9,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="application-name" content="TAS Walkie-Talkie">
     <meta name="theme-color" content="#10295F">
-    <link rel="manifest" href="manifest.json?v=20260708-pwa-1">
+    <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
     <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
@@ -21,13 +21,12 @@
 </head>
 <body>
 
-<div id="alarm-overlay">
-    <div class="alarm-overlay-title">퇴근</div>
-    <div>업무 종료!<br>번호를 즉시 반납해주세요.</div>
-    <div class="alarm-overlay-sub">화면을 터치하면 알림이 꺼집니다.</div>
-</div>
-
 <div id="app-container">
+    <div id="notification-status" class="hidden notification-status" role="status"></div>
+    <div id="foreground-notification" class="hidden foreground-notification" role="alert">
+        <strong id="foreground-notification-title"></strong>
+        <span id="foreground-notification-body"></span>
+    </div>
     <div id="login-screen" class="screen login-screen">
         <div class="login-screen-bg">
             <div class="login-photo-bg"></div>
@@ -120,7 +119,6 @@
                 <div class="controls-top">
                     <span id="date-display" class="date-display"></span>
                     <div class="control-button-row">
-                        <button id="btn-user-alarm" class="btn btn-warning">호출</button>
                         <button id="btn-edit-mode" class="btn btn-secondary">수정</button>
                         <button id="btn-return-all" class="btn btn-danger">전체반납</button>
                     </div>
@@ -130,11 +128,6 @@
                     <button id="btn-mode-crew" class="btn btn-secondary">크루</button>
                     <button id="btn-mode-charge" class="btn btn-secondary">충전중</button>
                 </div>
-            </div>
-
-            <div id="user-incoming-alarm" class="hidden user-alarm-banner">
-                <div class="user-alarm-banner-title">직원 호출 알림 (관리자만 확인 가능합니다)</div>
-                <div id="user-alarm-list" class="user-alarm-list"></div>
             </div>
 
             <div id="number-grid" class="grid"></div>
@@ -175,13 +168,6 @@
                 </div>
 
                 <div id="admin-board-popup" class="hidden admin-board-popup">
-                    <div id="admin-incoming-alarm" class="hidden admin-alarm-banner">
-                        <div class="admin-alarm-banner-title">&#128276; 호출 알림 목록</div>
-                        <div id="alarm-list" class="admin-alarm-list"></div>
-                        <div class="admin-alarm-actions">
-                            <button id="btn-dismiss-alarm" class="btn admin-dismiss-btn">전체 끄기</button>
-                        </div>
-                    </div>
                     <p class="admin-board-guide">번호 박스를 누르면 즉시 강제 취소됩니다.</p>
                     <div id="admin-number-grid" class="grid"></div>
                 </div>
@@ -196,9 +182,29 @@
                 </div>
             </div>
 
+            <div class="admin-section notification-section">
+                <h3>🚨 긴급 알림</h3>
+                <div class="notification-targets" role="radiogroup" aria-label="긴급 알림 대상">
+                    <label><input type="radio" name="urgent-target" value="occupied" checked> 번호 보유 직원</label>
+                    <label><input type="radio" name="urgent-target" value="unoccupied"> 번호 미점유 직원</label>
+                    <label><input type="radio" name="urgent-target" value="all"> 지점 전체 직원</label>
+                </div>
+                <textarea id="urgent-message" class="input-field notification-message" maxlength="500">🚨 긴급 반납 요청
+현재 사용 중인 무전기를 즉시 반납해주세요.</textarea>
+                <button id="btn-send-urgent" class="btn btn-danger admin-full-btn">🚨 긴급 알림 전송</button>
+                <div id="urgent-empty" class="hidden form-notice"></div>
+            </div>
+
+            <div class="admin-section notification-section">
+                <h3>지점 전체 알림</h3>
+                <input id="general-title" class="input-field" maxlength="80" placeholder="알림 제목">
+                <textarea id="general-message" class="input-field notification-message" maxlength="500" placeholder="알림 내용"></textarea>
+                <button id="btn-send-general" class="btn btn-primary admin-full-btn">지점 전체 알림 전송</button>
+            </div>
+
             <div class="admin-section">
-                <h3>미반납자 알림</h3>
-                <button id="btn-send-alarm" class="btn btn-danger admin-full-btn">반납 촉구 알림 전송</button>
+                <h3>최근 알림 이력</h3>
+                <div id="notification-history" class="notification-history">불러오는 중...</div>
             </div>
 
             <div class="admin-section">

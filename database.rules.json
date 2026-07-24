@@ -1,0 +1,75 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "system": {
+      ".read": "auth != null && auth.token.branch === 'PUS'",
+      "config": { ".write": "auth != null && auth.token.branch === 'PUS' && auth.token.role === 'admin'" },
+      "whitelist": { ".write": "auth != null && auth.token.branch === 'PUS' && auth.token.role === 'admin'" },
+      "resetRequests": {
+        "$userId": {
+          ".write": "auth != null && auth.token.branch === 'PUS' && (auth.token.role === 'admin' || auth.token.userId === $userId)"
+        }
+      },
+      "boardState": { ".write": "auth != null && auth.token.branch === 'PUS'" }
+    },
+    "users": {
+      "$userId": {
+        ".read": "auth != null && auth.token.branch === 'PUS' && (auth.token.role === 'admin' || auth.token.userId === $userId)",
+        ".write": "auth != null && auth.token.branch === 'PUS' && auth.token.role === 'admin'"
+      }
+    },
+    "history": {
+      ".read": "auth != null && auth.token.branch === 'PUS'",
+      ".write": "auth != null && auth.token.branch === 'PUS'"
+    },
+    "pushTokens": {
+      "$userId": {
+        ".read": "auth != null && auth.token.branch === 'PUS' && auth.token.userId === $userId",
+        ".write": "auth != null && auth.token.branch === 'PUS' && auth.token.userId === $userId"
+      }
+    },
+    "notificationLogs": {
+      ".read": "auth != null && auth.token.branch === 'PUS' && auth.token.role === 'admin'",
+      ".write": false
+    },
+    "authMigrations": { ".read": false, ".write": false },
+    "_internal": { ".read": false, ".write": false },
+    "branches": {
+      "$branch": {
+        "system": {
+          ".read": "auth != null && auth.token.branch === $branch",
+          "config": { ".write": "auth != null && auth.token.branch === $branch && auth.token.role === 'admin'" },
+          "whitelist": { ".write": "auth != null && auth.token.branch === $branch && auth.token.role === 'admin'" },
+          "resetRequests": {
+            "$userId": {
+              ".write": "auth != null && auth.token.branch === $branch && (auth.token.role === 'admin' || auth.token.userId === $userId)"
+            }
+          },
+          "boardState": { ".write": "auth != null && auth.token.branch === $branch" }
+        },
+        "users": {
+          "$userId": {
+            ".read": "auth != null && auth.token.branch === $branch && (auth.token.role === 'admin' || auth.token.userId === $userId)",
+            ".write": "auth != null && auth.token.branch === $branch && auth.token.role === 'admin'"
+          }
+        },
+        "history": {
+          ".read": "auth != null && auth.token.branch === $branch",
+          ".write": "auth != null && auth.token.branch === $branch"
+        },
+        "pushTokens": {
+          "$userId": {
+            ".read": "auth != null && auth.token.branch === $branch && auth.token.userId === $userId",
+            ".write": "auth != null && auth.token.branch === $branch && auth.token.userId === $userId"
+          }
+        },
+        "notificationLogs": {
+          ".read": "auth != null && auth.token.branch === $branch && auth.token.role === 'admin'",
+          ".write": false
+        },
+        "authMigrations": { ".read": false, ".write": false }
+      }
+    }
+  }
+}

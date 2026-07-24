@@ -25,7 +25,6 @@ function getModeDisplayName() {
     }
     return state.currentUser;
 }
-
 function formatElapsedTime(elapsed) {
     const mins = Math.floor(elapsed / 60000);
     const secs = Math.floor((elapsed % 60000) / 1000);
@@ -92,25 +91,10 @@ export function resetEditModeButton() {
     button.style.color = "white";
 }
 
-export async function sendUserAlarm() {
-    try {
-        await push(dbRef("system/userAlarms"), {
-            timestamp: Date.now(),
-            sender: state.currentUser,
-            dismissed: false
-        });
-        alert("관리자에게 호출 알림을 전송했습니다.");
-    } catch (error) {
-        alert("알림 전송 실패. 네트워크를 확인해주세요.");
-    }
-}
-
 export function logoutAction() {
     state.currentUser = null;
     state.isAdmin = false;
     state.currentBoardNumbers = {};
-    state.currentUserAlarmSenders = new Set();
-    state.currentAlarmSenders = new Set();
     clearSession();
     location.reload();
 }
@@ -164,63 +148,6 @@ export function renderGrid(gridElement, totalNumbers, disabledNumbers, numbers, 
     }
 }
 
-export function applyAlarmBlinkToUserGrid(senders) {
-    const grid = document.getElementById("number-grid");
-    if (!grid) {
-        return;
-    }
-
-    Array.from(grid.querySelectorAll(".number-box")).forEach((box) => {
-        const nameTag = box.querySelector(".name-tag");
-        const base = nameTag ? nameTag.innerText.split("(")[0] : "";
-        if (senders.has(base)) {
-            box.classList.add("alarm-blink");
-        } else {
-            box.classList.remove("alarm-blink");
-        }
-    });
-}
-
-export function listenToUserAlarmsForUser() {
-    const fiveMin = 5 * 60 * 1000;
-    onValue(dbRef("system/userAlarms"), (snap) => {
-        const banner = document.getElementById("user-incoming-alarm");
-        const list = document.getElementById("user-alarm-list");
-        if (!banner || !list) {
-            return;
-        }
-
-        if (!snap.exists()) {
-            state.currentUserAlarmSenders = new Set();
-            banner.classList.add("hidden");
-            applyAlarmBlinkToUserGrid(state.currentUserAlarmSenders);
-            return;
-        }
-
-        const allAlarms = snap.val();
-        const now = Date.now();
-        const active = Object.entries(allAlarms)
-            .map(([key, value]) => ({ key, ...value }))
-            .filter((alarm) => !alarm.dismissed && now - alarm.timestamp < fiveMin)
-            .sort((a, b) => b.timestamp - a.timestamp);
-
-        if (active.length === 0) {
-            state.currentUserAlarmSenders = new Set();
-            banner.classList.add("hidden");
-            applyAlarmBlinkToUserGrid(state.currentUserAlarmSenders);
-            return;
-        }
-
-        list.innerHTML = active.map((alarm) => (
-            `<div style="padding:4px 0; border-bottom:1px solid #ffd0d0;">&#128276; <b>${alarm.sender}</b> (${formatElapsedTime(now - alarm.timestamp)})</div>`
-        )).join("");
-
-        state.currentUserAlarmSenders = new Set(active.map((alarm) => alarm.sender));
-        banner.classList.remove("hidden");
-        applyAlarmBlinkToUserGrid(state.currentUserAlarmSenders);
-    });
-}
-
 export function listenToBoard() {
     const grid = document.getElementById("number-grid");
     onValue(dbRef("system"), (snapshot) => {
@@ -244,9 +171,6 @@ export function listenToBoard() {
             onToggleNumber: toggleNumber
         });
 
-        if (state.currentUserAlarmSenders.size > 0) {
-            applyAlarmBlinkToUserGrid(state.currentUserAlarmSenders);
-        }
     });
 }
 
@@ -404,36 +328,4 @@ export async function returnAllNumbers() {
         console.error("전체 반납 오류:", error);
         alert("처리 중 오류가 발생했습니다.");
     }
-}
-
-export function listenToAlarms() {
-    onValue(dbRef("system/alarm"), async (snap) => {
-        if (!snap.exists()) {
-            return;
-        }
-
-        const alarmData = snap.val();
-        if (Date.now() - alarmData.timestamp > 5000) {
-            return;
-        }
-
-        try {
-            const stateSnap = await get(dbRef("system/boardState/numbers"));
-            const numbers = stateSnap.exists() ? stateSnap.val() || {} : {};
-            const isMyNameLeft = Object.values(numbers).some((name) => name && name.includes(state.currentUser));
-
-            if (isMyNameLeft) {
-                if (navigator.vibrate) {
-                    navigator.vibrate([500, 200, 500, 200, 500]);
-                }
-                const overlay = document.getElementById("alarm-overlay");
-                overlay.style.display = "flex";
-                overlay.onclick = () => {
-                    overlay.style.display = "none";
-                };
-            }
-        } catch (error) {
-            console.error("알람 처리 오류:", error);
-        }
-    });
 }

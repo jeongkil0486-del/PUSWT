@@ -1,0 +1,10 @@
+{
+  "appId": "com.taswt.walkietalkie",
+  "appName": "TAS Walkie-Talkie",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#10295F"
+  }
+}

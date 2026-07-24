@@ -1,5 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, set, get, update, remove, onValue, push, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFunctions } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 
 export { ref, set, get, update, remove, onValue, push, runTransaction };
 
@@ -16,12 +18,6 @@ export const firebaseConfig = {
 
 export const APP_DISPLAY_NAME = "TAS Walkie-Talkie";
 export const DEFAULT_BRANCH = "PUS";
-export const ADMIN_ACCOUNTS = {
-    PUS: { id: "PUSWT", password: "PUSWT" },
-    TAE: { id: "TAEWT", password: "TAEWT" },
-    CJJ: { id: "CJJWT", password: "CJJWT" },
-    GMP: { id: "GMPWT", password: "GMPWT" }
-};
 
 export const BRANCH_OPTIONS = [
     { code: "PUS", label: "부산" },
@@ -30,66 +26,11 @@ export const BRANCH_OPTIONS = [
     { code: "GMP", label: "김포" }
 ];
 
-export const DEFAULT_BRANCH_WHITELISTS = {
-    TAE: [
-        "김인숙",
-        "신은지",
-        "이가림",
-        "김아란",
-        "손주희",
-        "서한별",
-        "서희정",
-        "이지현1",
-        "서세영",
-        "정재연",
-        "서은영",
-        "이도희",
-        "이지현2",
-        "박가현",
-        "배효진",
-        "전보현",
-        "김수형",
-        "김광수",
-        "김규리2",
-        "조연아",
-        "조윤성",
-        "김예진",
-        "김혁진",
-        "손정선",
-        "김유진",
-        "박시연",
-        "이은지",
-        "박민영",
-        "곽예린",
-        "김세은",
-        "서승희",
-        "이윤재",
-        "김단영",
-        "김련희",
-        "김영훈",
-        "이민아",
-        "정소영",
-        "김경종",
-        "이향기",
-        "김진관",
-        "이균동",
-        "황지원",
-        "김민정",
-        "정현정",
-        "배정은",
-        "이예지",
-        "손상희",
-        "노수지",
-        "이예슬",
-        "채원숙",
-        "임효영",
-        "차현서"
-    ]
-};
-
 const app = initializeApp(firebaseConfig);
 
 export const db = getDatabase(app);
+export const auth = getAuth(app);
+export const functions = getFunctions(app, "asia-northeast3");
 
 export const state = {
     currentUser: null,
@@ -99,10 +40,10 @@ export const state = {
     isProcessingClick: false,
     isEditMode: false,
     currentBoardNumbers: {},
-    currentUserAlarmSenders: new Set(),
-    currentAlarmSenders: new Set(),
     todayString: "",
     currentBranch: DEFAULT_BRANCH,
+    authUser: null,
+    pendingNotificationRoute: null,
     seatNames: {}   // { "1": "여객1", "2": "크루2", ... }
 };
 
@@ -120,11 +61,6 @@ export function normalizeBranch(branchCode) {
 export function getBranchLabel(branchCode = state.currentBranch) {
     const normalized = normalizeBranch(branchCode);
     return BRANCH_OPTIONS.find((branch) => branch.code === normalized)?.label || normalized;
-}
-
-export function getAdminAccount(branchCode = state.currentBranch) {
-    const normalized = normalizeBranch(branchCode);
-    return ADMIN_ACCOUNTS[normalized] || ADMIN_ACCOUNTS[DEFAULT_BRANCH];
 }
 
 export function isDefaultBranch(branchCode = state.currentBranch) {

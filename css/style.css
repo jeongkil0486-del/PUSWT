@@ -40,6 +40,100 @@ body.login-active {
     display: none !important;
 }
 
+.notification-status,
+.foreground-notification {
+    position: fixed;
+    z-index: 3000;
+    left: 12px;
+    right: 12px;
+    top: calc(12px + env(safe-area-inset-top));
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 12px 16px;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.24);
+}
+
+.notification-status {
+    background: #fff4d6;
+    color: #633f00;
+    border: 1px solid #f0c36a;
+}
+
+.notification-status[data-kind="error"] {
+    background: #fff0f0;
+    color: #8b1515;
+    border-color: #e69393;
+}
+
+.foreground-notification {
+    display: grid;
+    gap: 5px;
+    background: #10295f;
+    color: #fff;
+}
+
+.notification-section {
+    display: grid;
+    gap: 10px;
+}
+
+.notification-targets {
+    display: grid;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #f4f6fb;
+}
+
+.notification-targets label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.notification-message {
+    min-height: 92px;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.5;
+}
+
+.form-notice {
+    padding: 10px;
+    border-radius: 8px;
+    color: #6c4a00;
+    background: #fff5d7;
+}
+
+.notification-history {
+    display: grid;
+    gap: 10px;
+}
+
+.notification-log-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 5px 10px;
+    padding: 12px;
+    border: 1px solid #dde3ef;
+    border-radius: 10px;
+    background: #f8faff;
+}
+
+.notification-log-item span,
+.notification-log-item small {
+    color: #667085;
+    font-size: 12px;
+}
+
+.notification-log-item p,
+.notification-log-item small {
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
 .screen {
     min-height: 100vh;
 }
