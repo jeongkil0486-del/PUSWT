@@ -1,4 +1,4 @@
-import { dbRef, get, state, getBranchLabel } from "./data.js";
+import { usageLogRef, get, state, getBranchLabel } from "./data.js";
 import { Capacitor } from "@capacitor/core";
 import { Directory, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
@@ -11,18 +11,10 @@ export async function exportExcel() {
             return;
         }
 
-        let logData = {};
-        if (targetDate === state.todayString) {
-            const todaySnap = await get(dbRef("system/boardState"));
-            if (todaySnap.exists() && todaySnap.val().log) {
-                logData = todaySnap.val().log;
-            }
-        } else {
-            const historySnap = await get(dbRef(`history/${targetDate}`));
-            if (historySnap.exists() && historySnap.val().log) {
-                logData = historySnap.val().log;
-            }
-        }
+        // usageLogs/{branch}/{yyyy-mm-dd}에서 선택한 날짜의 로그만 일회성으로 조회한다.
+        // (번호판 실시간 경로와는 무관하므로 매번 전체 데이터를 내려받지 않는다)
+        const logSnap = await get(usageLogRef(targetDate));
+        const logData = logSnap.exists() ? logSnap.val() : {};
 
         const logEntries = Object.values(logData);
         if (logEntries.length === 0) {

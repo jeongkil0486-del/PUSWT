@@ -77,9 +77,13 @@ export async function sendGeneralNotification() {
     }
 }
 
+let unsubscribeNotificationHistory = null;
+
+// 알림 이력은 번호판 실시간 구독과 완전히 분리된 별도 경로(notificationLogs)만 구독한다.
 export function listenToNotificationHistory() {
+    stopListeningToNotificationHistory();
     const container = document.getElementById("notification-history");
-    onValue(dbRef("notificationLogs"), (snapshot) => {
+    unsubscribeNotificationHistory = onValue(dbRef("notificationLogs"), (snapshot) => {
         if (!snapshot.exists()) {
             container.textContent = "발송 이력이 없습니다.";
             return;
@@ -100,4 +104,9 @@ export function listenToNotificationHistory() {
         console.error(error);
         container.textContent = "알림 이력을 불러오지 못했습니다.";
     });
+}
+
+export function stopListeningToNotificationHistory() {
+    unsubscribeNotificationHistory?.();
+    unsubscribeNotificationHistory = null;
 }

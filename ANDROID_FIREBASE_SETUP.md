@@ -18,6 +18,27 @@
 
 - 부산(PUS): `system`, `users`, `history`, `pushTokens`, `notificationLogs`
 - 그 외 지점: `branches/{branchCode}/system`, `users`, `history`, `pushTokens`, `notificationLogs`
+- 신규(모든 지점 공통, 지점 접두사 분기 없이 `usageLogs/{branchCode}/...`): `usageLogs/{branchCode}/{yyyy-mm-dd}/{logId}`
+  (기존 `history/{date}`와 `system/boardState/log`는 더 이상 새로 기록되지 않지만 삭제하지도 않습니다. 옛 데이터 조회가 필요하면 그대로 남아 있습니다.)
+
+## 11. Realtime Database 다운로드 비용 최적화
+
+번호판이 바뀔 때마다 `system` 전체(사용 기록 포함)를 실시간으로 다시 내려받던 구조를 다음과 같이 나눴습니다.
+
+- 번호판 점유 상태: `system/boardState/numbers`만 실시간 구독
+- 설정값(총 번호 수, 숨김/제한, 번호명, 순서): `system/config`만 별도 실시간 구독
+- 사용 기록(선택/반납/수정 등 로그): `system/boardState`에서 완전히 제거하고 `usageLogs/{branchCode}/{yyyy-mm-dd}/{logId}`에 날짜별로 저장
+- 엑셀 추출: 선택한 날짜의 `usageLogs/{branchCode}/{yyyy-mm-dd}`만 `get()`으로 1회 조회 (실시간 구독 아님)
+- FCM 토큰(`pushTokens`)과 알림 발송 이력(`notificationLogs`)은 원래도 번호판 구독과 분리된 별도 경로였고, 이번 변경 이후에도 번호판 리스너에 포함되지 않습니다.
+- 앱이 백그라운드로 전환되면(`native.js`의 `registerAppStateListener`) 번호판/설정/초기화요청/알림이력 리스너를 모두 해제하고, 포그라운드로 돌아왔을 때만 현재 화면에 맞는 리스너를 다시 겁니다. 백그라운드 중 알림은 FCM 네이티브 푸시로만 수신합니다.
+- 오래된 사용 기록 정리: Cloud Functions 예약 함수 `pruneOldUsageLogs`가 매일 새벽 4시(KST)에 실행되어 90일이 지난 `usageLogs/{branchCode}/{yyyy-mm-dd}` 날짜 노드를 지점별로 삭제합니다. 보관 기간은 `functions/index.js`의 `USAGE_LOG_RETENTION_DAYS` 상수로 조정할 수 있습니다.
+
+### 남아 있는 다운로드 비용 위험 경로
+
+- `pruneOldUsageLogs`는 지점별 `usageLogs/{branch}` 전체를 한 번 읽어 날짜 키를 판별한 뒤 오래된 날짜만 삭제합니다. 보관 기간(90일)이 늘어나거나 지점 트래픽이 매우 커지면 이 야간 배치 자체의 1회성 다운로드 용량이 함께 커집니다. 필요하면 날짜 키 목록만 별도 인덱스(예: `usageLogDates/{branch}`)로 관리해 값 전체를 읽지 않도록 추가 최적화할 수 있습니다.
+- `system/config`는 자주 바뀌지 않지만 번호명(`seatNames`)이 많아지면(번호 수가 매우 많은 지점) 페이로드가 커질 수 있습니다. 현재 규모(지점당 최대 수십 개 번호)에서는 문제되지 않습니다.
+- `notificationLogs`, `system/resetRequests`는 관리자 화면에서만 실시간 구독하며 데이터量이 작아 비용 위험이 낮습니다. 다만 알림 발송이 매우 잦아지면 `notificationLogs`도 날짜 파티션 분리를 고려할 수 있습니다.
+- 관리자가 로그인한 상태로 화면을 켜 두면 `system/boardState/numbers`·`system/config` 구독은 계속 유지됩니다(포그라운드 실시간 기능이므로 의도된 동작입니다).
 
 ## 1. Firebase Console에서 Android 앱 추가
 

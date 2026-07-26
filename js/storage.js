@@ -42,6 +42,9 @@ export function restoreSelectedBranch() {
     return normalizeBranch(localStorage.getItem(SESSION_BRANCH_KEY) || DEFAULT_BRANCH);
 }
 
+// 사용 기록은 usageLogs/{branch}/{yyyy-mm-dd}에 이미 날짜별로 분리 저장되므로
+// 일자 롤오버 시 boardState에서 history로 로그를 복사할 필요가 없다.
+// boardState는 오직 "오늘의 점유 상태(numbers)"만 담당한다.
 export async function checkDailyReset(adminFlag = false) {
     state.todayString = getTodayString();
     const boardStateRef = dbRef("system/boardState");
@@ -50,14 +53,10 @@ export async function checkDailyReset(adminFlag = false) {
     if (snap.exists()) {
         const data = snap.val();
         if (data.date && data.date !== state.todayString) {
-            await set(dbRef(`history/${data.date}`), {
-                state: data.numbers || {},
-                log: data.log || {}
-            });
-            await update(boardStateRef, { date: state.todayString, numbers: {}, log: {} });
+            await update(boardStateRef, { date: state.todayString, numbers: {} });
         }
     } else {
-        await set(boardStateRef, { date: state.todayString, numbers: {}, log: {} });
+        await set(boardStateRef, { date: state.todayString, numbers: {} });
         await set(dbRef("system/config"), { totalNumbers: 20, disabledNumbers: {} });
     }
 

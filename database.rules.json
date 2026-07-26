@@ -23,6 +23,12 @@
       ".read": "auth != null && auth.token.branch === 'PUS'",
       ".write": "auth != null && auth.token.branch === 'PUS'"
     },
+    "usageLogs": {
+      "$branch": {
+        ".read": "auth != null && auth.token.branch === $branch",
+        ".write": "auth != null && auth.token.branch === $branch"
+      }
+    },
     "pushTokens": {
       "$userId": {
         ".read": "auth != null && auth.token.branch === 'PUS' && auth.token.userId === $userId",

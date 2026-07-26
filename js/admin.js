@@ -1,28 +1,48 @@
-import { dbRef, set, get, update, remove, onValue, push, state } from "./data.js";
+import { dbRef, usageLogRef, set, get, update, remove, onValue, push, state } from "./data.js";
 import { functions } from "./data.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 import { renderGrid } from "./ui.js";
 
-export function listenToAdminBoard() {
+let unsubscribeAdminNumbers = null;
+let unsubscribeAdminConfig = null;
+let latestAdminNumbers = {};
+let latestAdminConfig = {};
+
+function renderAdminBoardFromState() {
     const adminGrid = document.getElementById("admin-number-grid");
-    onValue(dbRef("system"), (snapshot) => {
-        if (!snapshot.exists()) {
-            return;
-        }
+    if (!adminGrid) return;
 
-        const data = snapshot.val();
-        const total = data.config?.totalNumbers || 20;
-        const disabled = data.config?.disabledNumbers || {};
-        const occupied = data.boardState?.numbers || {};
-        // seatNames, seatOrder 실시간 반영
-        state.seatNames = data.config?.seatNames || {};
-        state.seatOrder = data.config?.seatOrder || [];
+    const total = latestAdminConfig.totalNumbers || 20;
+    const disabled = latestAdminConfig.disabledNumbers || {};
+    state.seatNames = latestAdminConfig.seatNames || {};
+    state.seatOrder = latestAdminConfig.seatOrder || [];
 
-        renderGrid(adminGrid, total, disabled, occupied, {
-            isAdminView: true,
-            onAdminClear: adminForceClear
-        });
+    renderGrid(adminGrid, total, disabled, latestAdminNumbers, {
+        isAdminView: true,
+        onAdminClear: adminForceClear
     });
+}
+
+// system 전체 구독 대신 번호판(numbers)과 설정(config)만 각각 구독한다.
+export function listenToAdminBoard() {
+    stopListeningToAdminBoard();
+
+    unsubscribeAdminNumbers = onValue(dbRef("system/boardState/numbers"), (snapshot) => {
+        latestAdminNumbers = snapshot.val() || {};
+        renderAdminBoardFromState();
+    });
+
+    unsubscribeAdminConfig = onValue(dbRef("system/config"), (snapshot) => {
+        latestAdminConfig = snapshot.val() || {};
+        renderAdminBoardFromState();
+    });
+}
+
+export function stopListeningToAdminBoard() {
+    unsubscribeAdminNumbers?.();
+    unsubscribeAdminConfig?.();
+    unsubscribeAdminNumbers = null;
+    unsubscribeAdminConfig = null;
 }
 
 export async function resetAllPasswords() {
@@ -48,7 +68,7 @@ export async function adminForceClear(num, currentOccupant) {
     try {
         const timeStr = new Date().toLocaleTimeString("ko-KR", { hour12: false });
         await remove(dbRef(`system/boardState/numbers/${num}`));
-        await push(dbRef("system/boardState/log"), {
+        await push(usageLogRef(state.todayString), {
             time: timeStr,
             num,
             action: "관리자강제취소",
@@ -80,7 +100,7 @@ export async function adminResetAllNumbers() {
 
         const timeStr = new Date().toLocaleTimeString("ko-KR", { hour12: false });
         const tasks = Object.entries(numbers).map(([num, name]) =>
-            remove(dbRef(`system/boardState/numbers/${num}`)).then(() => push(dbRef("system/boardState/log"), {
+            remove(dbRef(`system/boardState/numbers/${num}`)).then(() => push(usageLogRef(state.todayString), {
                 time: timeStr,
                 num,
                 action: "관리자전체강제취소",
@@ -116,8 +136,11 @@ export async function requestPasswordReset() {
     }
 }
 
+let unsubscribeResetRequests = null;
+
 export function listenToResetRequests() {
-    onValue(dbRef("system/resetRequests"), (snap) => {
+    stopListeningToResetRequests();
+    unsubscribeResetRequests = onValue(dbRef("system/resetRequests"), (snap) => {
         const badge = document.getElementById("reset-badge");
 
         if (!snap.exists() || !snap.val()) {
@@ -144,6 +167,11 @@ export function listenToResetRequests() {
             badge.style.display = "none";
         }
     });
+}
+
+export function stopListeningToResetRequests() {
+    unsubscribeResetRequests?.();
+    unsubscribeResetRequests = null;
 }
 
 export function toggleWhitelistDropdown() {

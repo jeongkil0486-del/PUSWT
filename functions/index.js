@@ -3,6 +3,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getDatabase } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
 import { collectDevices, selectTargetUsers } from "./lib/audience.js";
 
@@ -288,4 +289,32 @@ export const sendGeneralBranchNotification = onCall({ region: REGION }, async (r
         message,
         channelId: "branch_notices"
     });
+});
+
+const USAGE_LOG_RETENTION_DAYS = 90;
+
+// usageLogs/{branch}/{yyyy-mm-dd}는 지점·날짜별로 계속 쌓이는 구조이므로
+// 보관 기간이 지난 날짜는 매일 새벽에 정리해 RTDB 저장/다운로드 비용이
+// 무한정 늘어나지 않게 한다.
+export const pruneOldUsageLogs = onSchedule({
+    region: REGION,
+    schedule: "0 4 * * *",
+    timeZone: "Asia/Seoul"
+}, async () => {
+    const cutoff = Date.now() - USAGE_LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const db = getDatabase();
+
+    for (const branch of BRANCHES) {
+        const branchRef = db.ref(`usageLogs/${branch}`);
+        const snapshot = await branchRef.get();
+        if (!snapshot.exists()) continue;
+
+        const dateKeys = Object.keys(snapshot.val());
+        const staleDates = dateKeys.filter((dateKey) => {
+            const parsed = new Date(`${dateKey}T00:00:00+09:00`);
+            return !Number.isNaN(parsed.getTime()) && parsed.getTime() < cutoff;
+        });
+
+        await Promise.all(staleDates.map((dateKey) => branchRef.child(dateKey).remove()));
+    }
 });

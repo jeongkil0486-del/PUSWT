@@ -21,15 +21,18 @@ import {
     toggleEditMode,
     logoutAction,
     listenToBoard,
+    stopListeningToBoard,
     returnAllNumbers
 } from "./ui.js";
 import {
     listenToAdminBoard,
+    stopListeningToAdminBoard,
     resetAllPasswords,
     adminResetAllNumbers,
     toggleAdminBoard,
     requestPasswordReset,
     listenToResetRequests,
+    stopListeningToResetRequests,
     toggleWhitelistDropdown,
     handleWhitelistOutsideClick,
     addUser,
@@ -44,9 +47,10 @@ import {
 } from "./admin.js";
 import { exportExcel } from "./excel.js";
 import { authenticateUser, logoutFirebase } from "./auth.js";
-import { deactivateCurrentDeviceToken, initializePushForLogin } from "./native.js";
+import { deactivateCurrentDeviceToken, initializePushForLogin, registerAppStateListener } from "./native.js";
 import {
     listenToNotificationHistory,
+    stopListeningToNotificationHistory,
     sendGeneralNotification,
     sendUrgentNotification
 } from "./notifications.js";
@@ -75,10 +79,34 @@ function syncBranchSelection(branchCode) {
     updateBranchBadges();
 }
 
+// 앱이 백그라운드/종료 상태가 되면 RTDB 리스너를 모두 끊고,
+// 포그라운드로 돌아왔을 때만 현재 화면(admin/main)에 맞는 리스너를 다시 건다.
+// 알림 수신은 이 리스너들과 무관하게 FCM 네이티브 푸시가 전담한다.
+function stopAllBoardListeners() {
+    stopListeningToBoard();
+    stopListeningToAdminBoard();
+    stopListeningToResetRequests();
+    stopListeningToNotificationHistory();
+}
+
 function processLoginAction(id, adminFlag) {
     state.currentUser = id;
     state.isAdmin = adminFlag;
     saveSession(id, adminFlag, state.currentBranch);
+
+    registerAppStateListener({
+        onBackground: stopAllBoardListeners,
+        onForeground: () => {
+            if (!state.currentUser) return;
+            if (state.isAdmin) {
+                listenToAdminBoard();
+                listenToResetRequests();
+                listenToNotificationHistory();
+            } else {
+                listenToBoard();
+            }
+        }
+    });
 
     if (state.isAdmin) {
         switchScreen("admin");

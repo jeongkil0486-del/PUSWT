@@ -102,6 +102,25 @@ export function isNativeAndroid() {
     return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
 }
 
+let appStateHandlers = null;
+let appStateListenerRegistered = false;
+
+// 앱이 백그라운드/종료 상태로 전환되면 RTDB 실시간 리스너를 모두 끊고,
+// 알림은 FCM 네이티브 푸시로만 수신한다. 포그라운드 복귀 시에만 다시 구독한다.
+export function registerAppStateListener(handlers) {
+    appStateHandlers = handlers;
+    if (!isNativeAndroid() || appStateListenerRegistered) return;
+    appStateListenerRegistered = true;
+    App.addListener("appStateChange", ({ isActive }) => {
+        if (!appStateHandlers) return;
+        if (isActive) {
+            appStateHandlers.onForeground?.();
+        } else {
+            appStateHandlers.onBackground?.();
+        }
+    });
+}
+
 export async function initializePushForLogin() {
     if (!isNativeAndroid() || !state.currentUser || state.isAdmin) return;
     await registerListeners();

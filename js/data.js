@@ -76,6 +76,13 @@ export function dbRef(path, branchCode = state.currentBranch) {
     return ref(db, scopedPath(path, branchCode));
 }
 
+// 사용 기록 전용 경로: usageLogs/{branchCode}/{yyyy-mm-dd}/{logId}
+// 번호판 실시간 경로(system/boardState)와 완전히 분리해 다운로드 비용을 줄인다.
+export function usageLogRef(date, branchCode = state.currentBranch) {
+    const branch = normalizeBranch(branchCode);
+    return ref(db, `usageLogs/${branch}/${date}`);
+}
+
 export function setCurrentBranch(branchCode) {
     state.currentBranch = normalizeBranch(branchCode);
     return state.currentBranch;

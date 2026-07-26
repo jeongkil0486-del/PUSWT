@@ -1,5 +1,6 @@
 import {
     dbRef,
+    usageLogRef,
     set,
     get,
     remove,
@@ -148,30 +149,50 @@ export function renderGrid(gridElement, totalNumbers, disabledNumbers, numbers, 
     }
 }
 
-export function listenToBoard() {
+let unsubscribeBoardNumbers = null;
+let unsubscribeBoardConfig = null;
+let latestBoardConfig = {};
+
+function renderBoardFromState() {
     const grid = document.getElementById("number-grid");
-    onValue(dbRef("system"), (snapshot) => {
-        if (!snapshot.exists()) {
-            return;
-        }
+    if (!grid) return;
 
-        const data = snapshot.val();
-        const total = data.config?.totalNumbers || 20;
-        const disabled = data.config?.disabledNumbers || {};
-        const hidden = data.config?.hiddenNumbers || {};
-        state.currentBoardNumbers = data.boardState?.numbers || {};
-        // seatNames 실시간 반영 (지점별)
-        state.seatNames = data.config?.seatNames || {};
-        state.seatOrder = data.config?.seatOrder || [];
+    const total = latestBoardConfig.totalNumbers || 20;
+    const disabled = latestBoardConfig.disabledNumbers || {};
+    const hidden = latestBoardConfig.hiddenNumbers || {};
+    state.seatNames = latestBoardConfig.seatNames || {};
+    state.seatOrder = latestBoardConfig.seatOrder || [];
 
-        // hiddenNumbers는 disabled처럼 처리 (합산)
-        const mergedDisabled = { ...disabled, ...hidden };
+    // hiddenNumbers는 disabled처럼 처리 (합산)
+    const mergedDisabled = { ...disabled, ...hidden };
 
-        renderGrid(grid, total, mergedDisabled, state.currentBoardNumbers, {
-            onToggleNumber: toggleNumber
-        });
-
+    renderGrid(grid, total, mergedDisabled, state.currentBoardNumbers, {
+        onToggleNumber: toggleNumber
     });
+}
+
+// system 전체를 구독하지 않고 번호판(numbers)과 설정(config)을 각각 구독한다.
+// system/boardState 아래에는 더 이상 계속 커지는 log가 존재하지 않으므로
+// 두 경로 모두 번호판 변경 때마다 전체 트리를 다시 내려받지 않는다.
+export function listenToBoard() {
+    stopListeningToBoard();
+
+    unsubscribeBoardNumbers = onValue(dbRef("system/boardState/numbers"), (snapshot) => {
+        state.currentBoardNumbers = snapshot.val() || {};
+        renderBoardFromState();
+    });
+
+    unsubscribeBoardConfig = onValue(dbRef("system/config"), (snapshot) => {
+        latestBoardConfig = snapshot.val() || {};
+        renderBoardFromState();
+    });
+}
+
+export function stopListeningToBoard() {
+    unsubscribeBoardNumbers?.();
+    unsubscribeBoardConfig?.();
+    unsubscribeBoardNumbers = null;
+    unsubscribeBoardConfig = null;
 }
 
 export async function toggleNumber(num, currentOccupant, isOccupied) {
@@ -183,7 +204,7 @@ export async function toggleNumber(num, currentOccupant, isOccupied) {
     try {
         const timeStr = new Date().toLocaleTimeString("ko-KR", { hour12: false });
         const displayName = getModeDisplayName();
-        const logRef = dbRef("system/boardState/log");
+        const logRef = usageLogRef(state.todayString);
 
         if (state.isEditMode && isOccupied) {
             if (currentOccupant.split("(")[0] === state.currentUser) {
@@ -306,7 +327,7 @@ export async function returnAllNumbers() {
                 name === `${state.currentUser}(충전중)`
             )) {
                 tasks.push(
-                    remove(dbRef(`system/boardState/numbers/${num}`)).then(() => push(dbRef("system/boardState/log"), {
+                    remove(dbRef(`system/boardState/numbers/${num}`)).then(() => push(usageLogRef(state.todayString), {
                         time: timeStr,
                         num,
                         action: "전체반납",
