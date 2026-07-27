@@ -1,0 +1,269 @@
+import { Capacitor } from "@capacitor/core";
+import { PushNotifications } from "@capacitor/push-notifications";
+import { App } from "@capacitor/app";
+import { dbRef, set, state } from "./data.js";
+
+const DEVICE_ID_KEY = "TASWT_deviceId";
+let listenersRegistered = false;
+
+function getDeviceId() {
+    let value = localStorage.getItem(DEVICE_ID_KEY);
+    if (!value) {
+        value = globalThis.crypto?.randomUUID?.() || `android-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        localStorage.setItem(DEVICE_ID_KEY, value);
+    }
+    return value;
+}
+
+function showStatus(message, kind = "warning") {
+    const banner = document.getElementById("notification-status");
+    if (!banner) return;
+    banner.textContent = message;
+    banner.dataset.kind = kind;
+    banner.classList.remove("hidden");
+}
+
+function showForegroundNotification(notification) {
+    const container = document.getElementById("foreground-notification");
+    if (!container) return;
+    document.getElementById("foreground-notification-title").textContent = notification.title || "TAS WT 알림";
+    document.getElementById("foreground-notification-body").textContent = notification.body || "";
+    container.classList.remove("hidden");
+    clearTimeout(showForegroundNotification.timer);
+    showForegroundNotification.timer = setTimeout(() => container.classList.add("hidden"), 8000);
+}
+
+function rememberRoute(data = {}) {
+    state.pendingNotificationRoute = data.route || (state.isAdmin ? "admin" : "main");
+    if (state.currentUser) {
+        window.dispatchEvent(new CustomEvent("taswt:notification-route", {
+            detail: { route: state.pendingNotificationRoute }
+        }));
+    }
+}
+
+async function createChannels() {
+    await PushNotifications.createChannel({
+        id: "urgent_alerts",
+        name: "긴급 알림",
+        description: "즉시 확인이 필요한 지점 긴급 알림",
+        importance: 5,
+        visibility: 1,
+        vibration: true,
+        sound: "default",
+        lights: true
+    });
+    await PushNotifications.createChannel({
+        id: "branch_notices",
+        name: "지점 알림",
+        description: "현재 지점의 일반 공지",
+        importance: 3,
+        visibility: 1,
+        vibration: true,
+        sound: "default"
+    });
+}
+
+async function saveToken(token) {
+    if (!state.currentUser || state.isAdmin) return;
+    await set(dbRef(`pushTokens/${state.currentUser}/${getDeviceId()}`), {
+        token,
+        platform: "android",
+        updatedAt: Date.now(),
+        lastLoginAt: Date.now(),
+        active: true
+    });
+}
+
+async function registerListeners() {
+    if (listenersRegistered) return;
+    listenersRegistered = true;
+
+    await PushNotifications.addListener("registration", ({ value }) => {
+        saveToken(value).catch((error) => console.error("FCM 토큰 저장 실패:", error));
+    });
+    await PushNotifications.addListener("registrationError", (error) => {
+        console.error("푸시 등록 실패:", error);
+        showStatus("알림 등록에 실패했습니다. 네트워크와 Firebase 설정을 확인해주세요.", "error");
+    });
+    await PushNotifications.addListener("pushNotificationReceived", (notification) => {
+        showForegroundNotification(notification);
+    });
+    await PushNotifications.addListener("pushNotificationActionPerformed", ({ notification }) => {
+        rememberRoute(notification.data || {});
+    });
+    await App.addListener("appUrlOpen", ({ url }) => {
+        if (url.includes("admin")) rememberRoute({ route: "admin" });
+        if (url.includes("main")) rememberRoute({ route: "main" });
+    });
+}
+
+export function isNativeAndroid() {
+    return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+}
+
+let androidImeLogin = null;
+
+// Android WebView에서만 실제 IME input을 backdrop-filter/레이아웃 트리 밖으로
+// 이동한다. 화면에는 원래 위치의 display가 보이고, input 값은 IME만 변경한다.
+export function initializeAndroidImeSafeLogin() {
+    if (!isNativeAndroid() || androidImeLogin) return;
+
+    const input = document.getElementById("login-id");
+    const row = input?.closest(".control-row");
+    const anchor = input?.parentElement;
+    if (!input || !row || !anchor) return;
+
+    const display = document.createElement("span");
+    display.id = "login-id-display";
+    display.className = "control-input control-display android-ime-display";
+    display.setAttribute("aria-hidden", "true");
+    display.textContent = input.value || "ID";
+
+    input.replaceWith(display);
+    document.body.appendChild(input);
+    input.classList.remove("control-input-centered");
+    input.classList.add("android-ime-native-input");
+
+    let isComposing = false;
+    let isActive = false;
+
+    const updateDisplay = () => {
+        display.textContent = input.value || "ID";
+    };
+
+    const syncPosition = () => {
+        if (!isActive || isComposing) return;
+        const rect = anchor.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        input.style.left = `${rect.left}px`;
+        input.style.top = `${rect.top}px`;
+        input.style.width = `${rect.width}px`;
+        input.style.height = `${rect.height}px`;
+    };
+
+    const setActive = (active) => {
+        isActive = active;
+        input.classList.toggle("android-ime-native-input-active", active);
+        if (active) {
+            requestAnimationFrame(syncPosition);
+        } else {
+            row.classList.remove("ime-active");
+            input.blur();
+        }
+    };
+
+    input.addEventListener("focus", () => {
+        row.classList.add("ime-active");
+        syncPosition();
+    });
+    input.addEventListener("blur", () => row.classList.remove("ime-active"));
+    input.addEventListener("compositionstart", () => {
+        isComposing = true;
+    });
+    input.addEventListener("compositionupdate", updateDisplay);
+    input.addEventListener("compositionend", () => {
+        updateDisplay();
+        isComposing = false;
+        requestAnimationFrame(syncPosition);
+    });
+    input.addEventListener("input", updateDisplay);
+
+    window.addEventListener("resize", syncPosition, { passive: true });
+    window.addEventListener("scroll", syncPosition, { passive: true });
+    window.visualViewport?.addEventListener("resize", syncPosition, { passive: true });
+    window.visualViewport?.addEventListener("scroll", syncPosition, { passive: true });
+
+    androidImeLogin = {
+        input,
+        display,
+        syncPosition,
+        setActive,
+        reset() {
+            isComposing = false;
+            input.value = "";
+            display.textContent = "ID";
+            row.classList.remove("ime-active");
+        }
+    };
+}
+
+export function setAndroidImeLoginActive(active) {
+    androidImeLogin?.setActive(active);
+}
+
+export function syncAndroidImeLoginPosition() {
+    androidImeLogin?.syncPosition();
+}
+
+export function resetAndroidImeLogin() {
+    androidImeLogin?.reset();
+}
+
+let appStateHandlers = null;
+let appStateListenerRegistered = false;
+
+// 앱이 백그라운드/종료 상태로 전환되면 RTDB 실시간 리스너를 모두 끊고,
+// 알림은 FCM 네이티브 푸시로만 수신한다. 포그라운드 복귀 시에만 다시 구독한다.
+export function registerAppStateListener(handlers) {
+    appStateHandlers = handlers;
+    if (!isNativeAndroid() || appStateListenerRegistered) return;
+    appStateListenerRegistered = true;
+    App.addListener("appStateChange", ({ isActive }) => {
+        if (!appStateHandlers) return;
+        if (isActive) {
+            appStateHandlers.onForeground?.();
+        } else {
+            appStateHandlers.onBackground?.();
+        }
+    });
+}
+
+let backButtonInterceptor = null;
+let backButtonListenerRegistered = false;
+
+// 전체화면 팝업 등이 열려 있을 때 Android 뒤로가기를 가로채고 싶은 모듈이
+// 호출한다. 여러 번 호출되면 마지막에 등록한 판별 함수만 사용한다.
+// interceptor가 true를 반환하면 뒤로가기를 소비(팝업 닫기 등)한 것으로 보고
+// 기존 기본 동작(웹뷰 히스토리 back / 앱 종료)은 실행하지 않는다.
+export function setBackButtonInterceptor(interceptor) {
+    backButtonInterceptor = interceptor;
+}
+
+// Capacitor의 기본 뒤로가기 동작(캔고백이면 히스토리 back, 아니면 앱 종료)을
+// 그대로 재현하되, backButtonInterceptor가 소비한 경우에는 건드리지 않는다.
+export function registerBackButtonListener() {
+    if (!isNativeAndroid() || backButtonListenerRegistered) return;
+    backButtonListenerRegistered = true;
+    App.addListener("backButton", ({ canGoBack }) => {
+        if (backButtonInterceptor?.()) {
+            return;
+        }
+        if (canGoBack) {
+            window.history.back();
+        } else {
+            App.exitApp();
+        }
+    });
+}
+
+export async function initializePushForLogin() {
+    if (!isNativeAndroid() || !state.currentUser || state.isAdmin) return;
+    await registerListeners();
+    await createChannels();
+
+    let permission = await PushNotifications.checkPermissions();
+    if (permission.receive === "prompt") {
+        permission = await PushNotifications.requestPermissions();
+    }
+    if (permission.receive !== "granted") {
+        showStatus("알림 권한이 꺼져 있습니다. Android 설정에서 TAS WT 알림을 허용해주세요.");
+        return;
+    }
+    await PushNotifications.register();
+}
+
+export async function deactivateCurrentDeviceToken() {
+    if (!isNativeAndroid() || !state.currentUser || state.isAdmin) return;
+    await set(dbRef(`pushTokens/${state.currentUser}/${getDeviceId()}/active`), false).catch(() => {});
+}

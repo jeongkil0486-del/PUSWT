@@ -1,5 +1,6 @@
 import {
     dbRef,
+    usageLogRef,
     set,
     get,
     remove,
@@ -25,7 +26,6 @@ function getModeDisplayName() {
     }
     return state.currentUser;
 }
-
 function formatElapsedTime(elapsed) {
     const mins = Math.floor(elapsed / 60000);
     const secs = Math.floor((elapsed % 60000) / 1000);
@@ -36,9 +36,10 @@ export function switchScreen(target) {
     Object.values(screens).forEach((screen) => screen.classList.add("hidden"));
     screens[target].classList.remove("hidden");
 
-    const isLoginScreen = target === "login";
-    document.documentElement.classList.toggle("login-active", isLoginScreen);
-    document.body.classList.toggle("login-active", isLoginScreen);
+    // loading 화면도 login과 같은 전체화면 잠금 레이아웃을 사용한다.
+    const isFullScreenLock = target === "login" || target === "loading";
+    document.documentElement.classList.toggle("login-active", isFullScreenLock);
+    document.body.classList.toggle("login-active", isFullScreenLock);
 }
 
 export function updateBranchBadges() {
@@ -92,25 +93,10 @@ export function resetEditModeButton() {
     button.style.color = "white";
 }
 
-export async function sendUserAlarm() {
-    try {
-        await push(dbRef("system/userAlarms"), {
-            timestamp: Date.now(),
-            sender: state.currentUser,
-            dismissed: false
-        });
-        alert("관리자에게 호출 알림을 전송했습니다.");
-    } catch (error) {
-        alert("알림 전송 실패. 네트워크를 확인해주세요.");
-    }
-}
-
 export function logoutAction() {
     state.currentUser = null;
     state.isAdmin = false;
     state.currentBoardNumbers = {};
-    state.currentUserAlarmSenders = new Set();
-    state.currentAlarmSenders = new Set();
     clearSession();
     location.reload();
 }
@@ -164,90 +150,50 @@ export function renderGrid(gridElement, totalNumbers, disabledNumbers, numbers, 
     }
 }
 
-export function applyAlarmBlinkToUserGrid(senders) {
+let unsubscribeBoardNumbers = null;
+let unsubscribeBoardConfig = null;
+let latestBoardConfig = {};
+
+function renderBoardFromState() {
     const grid = document.getElementById("number-grid");
-    if (!grid) {
-        return;
-    }
+    if (!grid) return;
 
-    Array.from(grid.querySelectorAll(".number-box")).forEach((box) => {
-        const nameTag = box.querySelector(".name-tag");
-        const base = nameTag ? nameTag.innerText.split("(")[0] : "";
-        if (senders.has(base)) {
-            box.classList.add("alarm-blink");
-        } else {
-            box.classList.remove("alarm-blink");
-        }
+    const total = latestBoardConfig.totalNumbers || 20;
+    const disabled = latestBoardConfig.disabledNumbers || {};
+    const hidden = latestBoardConfig.hiddenNumbers || {};
+    state.seatNames = latestBoardConfig.seatNames || {};
+    state.seatOrder = latestBoardConfig.seatOrder || [];
+
+    // hiddenNumbers는 disabled처럼 처리 (합산)
+    const mergedDisabled = { ...disabled, ...hidden };
+
+    renderGrid(grid, total, mergedDisabled, state.currentBoardNumbers, {
+        onToggleNumber: toggleNumber
     });
 }
 
-export function listenToUserAlarmsForUser() {
-    const fiveMin = 5 * 60 * 1000;
-    onValue(dbRef("system/userAlarms"), (snap) => {
-        const banner = document.getElementById("user-incoming-alarm");
-        const list = document.getElementById("user-alarm-list");
-        if (!banner || !list) {
-            return;
-        }
-
-        if (!snap.exists()) {
-            state.currentUserAlarmSenders = new Set();
-            banner.classList.add("hidden");
-            applyAlarmBlinkToUserGrid(state.currentUserAlarmSenders);
-            return;
-        }
-
-        const allAlarms = snap.val();
-        const now = Date.now();
-        const active = Object.entries(allAlarms)
-            .map(([key, value]) => ({ key, ...value }))
-            .filter((alarm) => !alarm.dismissed && now - alarm.timestamp < fiveMin)
-            .sort((a, b) => b.timestamp - a.timestamp);
-
-        if (active.length === 0) {
-            state.currentUserAlarmSenders = new Set();
-            banner.classList.add("hidden");
-            applyAlarmBlinkToUserGrid(state.currentUserAlarmSenders);
-            return;
-        }
-
-        list.innerHTML = active.map((alarm) => (
-            `<div style="padding:4px 0; border-bottom:1px solid #ffd0d0;">&#128276; <b>${alarm.sender}</b> (${formatElapsedTime(now - alarm.timestamp)})</div>`
-        )).join("");
-
-        state.currentUserAlarmSenders = new Set(active.map((alarm) => alarm.sender));
-        banner.classList.remove("hidden");
-        applyAlarmBlinkToUserGrid(state.currentUserAlarmSenders);
-    });
-}
-
+// system 전체를 구독하지 않고 번호판(numbers)과 설정(config)을 각각 구독한다.
+// system/boardState 아래에는 더 이상 계속 커지는 log가 존재하지 않으므로
+// 두 경로 모두 번호판 변경 때마다 전체 트리를 다시 내려받지 않는다.
 export function listenToBoard() {
-    const grid = document.getElementById("number-grid");
-    onValue(dbRef("system"), (snapshot) => {
-        if (!snapshot.exists()) {
-            return;
-        }
+    stopListeningToBoard();
 
-        const data = snapshot.val();
-        const total = data.config?.totalNumbers || 20;
-        const disabled = data.config?.disabledNumbers || {};
-        const hidden = data.config?.hiddenNumbers || {};
-        state.currentBoardNumbers = data.boardState?.numbers || {};
-        // seatNames 실시간 반영 (지점별)
-        state.seatNames = data.config?.seatNames || {};
-        state.seatOrder = data.config?.seatOrder || [];
-
-        // hiddenNumbers는 disabled처럼 처리 (합산)
-        const mergedDisabled = { ...disabled, ...hidden };
-
-        renderGrid(grid, total, mergedDisabled, state.currentBoardNumbers, {
-            onToggleNumber: toggleNumber
-        });
-
-        if (state.currentUserAlarmSenders.size > 0) {
-            applyAlarmBlinkToUserGrid(state.currentUserAlarmSenders);
-        }
+    unsubscribeBoardNumbers = onValue(dbRef("system/boardState/numbers"), (snapshot) => {
+        state.currentBoardNumbers = snapshot.val() || {};
+        renderBoardFromState();
     });
+
+    unsubscribeBoardConfig = onValue(dbRef("system/config"), (snapshot) => {
+        latestBoardConfig = snapshot.val() || {};
+        renderBoardFromState();
+    });
+}
+
+export function stopListeningToBoard() {
+    unsubscribeBoardNumbers?.();
+    unsubscribeBoardConfig?.();
+    unsubscribeBoardNumbers = null;
+    unsubscribeBoardConfig = null;
 }
 
 export async function toggleNumber(num, currentOccupant, isOccupied) {
@@ -259,7 +205,7 @@ export async function toggleNumber(num, currentOccupant, isOccupied) {
     try {
         const timeStr = new Date().toLocaleTimeString("ko-KR", { hour12: false });
         const displayName = getModeDisplayName();
-        const logRef = dbRef("system/boardState/log");
+        const logRef = usageLogRef(state.todayString);
 
         if (state.isEditMode && isOccupied) {
             if (currentOccupant.split("(")[0] === state.currentUser) {
@@ -382,7 +328,7 @@ export async function returnAllNumbers() {
                 name === `${state.currentUser}(충전중)`
             )) {
                 tasks.push(
-                    remove(dbRef(`system/boardState/numbers/${num}`)).then(() => push(dbRef("system/boardState/log"), {
+                    remove(dbRef(`system/boardState/numbers/${num}`)).then(() => push(usageLogRef(state.todayString), {
                         time: timeStr,
                         num,
                         action: "전체반납",
@@ -404,36 +350,4 @@ export async function returnAllNumbers() {
         console.error("전체 반납 오류:", error);
         alert("처리 중 오류가 발생했습니다.");
     }
-}
-
-export function listenToAlarms() {
-    onValue(dbRef("system/alarm"), async (snap) => {
-        if (!snap.exists()) {
-            return;
-        }
-
-        const alarmData = snap.val();
-        if (Date.now() - alarmData.timestamp > 5000) {
-            return;
-        }
-
-        try {
-            const stateSnap = await get(dbRef("system/boardState/numbers"));
-            const numbers = stateSnap.exists() ? stateSnap.val() || {} : {};
-            const isMyNameLeft = Object.values(numbers).some((name) => name && name.includes(state.currentUser));
-
-            if (isMyNameLeft) {
-                if (navigator.vibrate) {
-                    navigator.vibrate([500, 200, 500, 200, 500]);
-                }
-                const overlay = document.getElementById("alarm-overlay");
-                overlay.style.display = "flex";
-                overlay.onclick = () => {
-                    overlay.style.display = "none";
-                };
-            }
-        } catch (error) {
-            console.error("알람 처리 오류:", error);
-        }
-    });
 }

@@ -1,0 +1,56 @@
+name: Android Debug APK
+
+# android-app-dev 브랜치 전용 워크플로우입니다. main에는 존재하지 않습니다.
+# google-services.json이 저장소에 없어도 빌드는 성공합니다(FCM은 런타임에만 필요).
+# 실제 푸시 테스트를 하려면 로컬에서 google-services.json을 추가한 뒤
+# 다시 빌드하거나, 이 워크플로우에 Secrets로 주입하는 방식으로 전환해야 합니다.
+
+on:
+  push:
+    branches:
+      - android-app-dev
+  workflow_dispatch: {}
+
+jobs:
+  build-debug-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install web dependencies
+        run: npm ci
+
+      - name: Build web assets
+        run: npm run build
+
+      - name: Sync Capacitor Android project
+        run: npx cap sync android
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android/gradlew
+
+      - name: Assemble debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --console=plain
+
+      - name: Upload debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tas-walkietalkie-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30

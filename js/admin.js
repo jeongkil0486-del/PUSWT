@@ -1,147 +1,49 @@
-import { dbRef, set, get, update, remove, onValue, push, state } from "./data.js";
+import { dbRef, usageLogRef, set, get, update, remove, onValue, push, state } from "./data.js";
+import { functions } from "./data.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 import { renderGrid } from "./ui.js";
+import { selectPendingResetUsers } from "./lib/resetRequests.js";
 
-function formatElapsedTime(elapsed) {
-    const mins = Math.floor(elapsed / 60000);
-    const secs = Math.floor((elapsed % 60000) / 1000);
-    return mins > 0 ? `${mins}분 ${secs}초 전` : `${secs}초 전`;
+let unsubscribeAdminNumbers = null;
+let unsubscribeAdminConfig = null;
+let latestAdminNumbers = {};
+let latestAdminConfig = {};
+
+function renderAdminBoardFromState() {
+    const adminGrid = document.getElementById("admin-number-grid");
+    if (!adminGrid) return;
+
+    const total = latestAdminConfig.totalNumbers || 20;
+    const disabled = latestAdminConfig.disabledNumbers || {};
+    state.seatNames = latestAdminConfig.seatNames || {};
+    state.seatOrder = latestAdminConfig.seatOrder || [];
+
+    renderGrid(adminGrid, total, disabled, latestAdminNumbers, {
+        isAdminView: true,
+        onAdminClear: adminForceClear
+    });
 }
 
-export function registerAdminGlobals() {
-    window.dismissAlarm = dismissAlarm;
-    window.dismissAlarmBySender = dismissAlarmBySender;
-}
-
+// system 전체 구독 대신 번호판(numbers)과 설정(config)만 각각 구독한다.
 export function listenToAdminBoard() {
-    const adminGrid = document.getElementById("admin-number-grid");
-    onValue(dbRef("system"), (snapshot) => {
-        if (!snapshot.exists()) {
-            return;
-        }
+    stopListeningToAdminBoard();
 
-        const data = snapshot.val();
-        const total = data.config?.totalNumbers || 20;
-        const disabled = data.config?.disabledNumbers || {};
-        const occupied = data.boardState?.numbers || {};
-        // seatNames, seatOrder 실시간 반영
-        state.seatNames = data.config?.seatNames || {};
-        state.seatOrder = data.config?.seatOrder || [];
+    unsubscribeAdminNumbers = onValue(dbRef("system/boardState/numbers"), (snapshot) => {
+        latestAdminNumbers = snapshot.val() || {};
+        renderAdminBoardFromState();
+    });
 
-        renderGrid(adminGrid, total, disabled, occupied, {
-            isAdminView: true,
-            onAdminClear: adminForceClear
-        });
-
-        if (state.currentAlarmSenders.size > 0) {
-            applyAlarmBlinkToBoxes(state.currentAlarmSenders);
-        }
+    unsubscribeAdminConfig = onValue(dbRef("system/config"), (snapshot) => {
+        latestAdminConfig = snapshot.val() || {};
+        renderAdminBoardFromState();
     });
 }
 
-export function applyAlarmBlinkToBoxes(senders) {
-    const adminGrid = document.getElementById("admin-number-grid");
-    if (!adminGrid) {
-        return;
-    }
-
-    Array.from(adminGrid.querySelectorAll(".number-box")).forEach((box) => {
-        const nameTag = box.querySelector(".name-tag");
-        const base = nameTag ? nameTag.innerText.split("(")[0] : "";
-        if (senders.has(base)) {
-            box.classList.add("alarm-blink");
-        } else {
-            box.classList.remove("alarm-blink");
-        }
-    });
-}
-
-export function clearAllAlarmBlink() {
-    const adminGrid = document.getElementById("admin-number-grid");
-    if (!adminGrid) {
-        return;
-    }
-
-    adminGrid.querySelectorAll(".alarm-blink").forEach((box) => box.classList.remove("alarm-blink"));
-    state.currentAlarmSenders = new Set();
-}
-
-export function listenToUserAlarms() {
-    const fiveMin = 5 * 60 * 1000;
-    onValue(dbRef("system/userAlarms"), (snap) => {
-        const alarmBanner = document.getElementById("admin-incoming-alarm");
-        const alarmList = document.getElementById("alarm-list");
-
-        if (!snap.exists()) {
-            alarmBanner.classList.add("hidden");
-            clearAllAlarmBlink();
-            return;
-        }
-
-        const allAlarms = snap.val();
-        const now = Date.now();
-
-        // 5분 이상 지난 항목은 Firebase에서 자동 dismissed 처리
-        const expiredKeys = Object.entries(allAlarms)
-            .filter(([, v]) => !v.dismissed && now - v.timestamp >= fiveMin)
-            .map(([key]) => key);
-        if (expiredKeys.length > 0) {
-            expiredKeys.forEach((key) => update(dbRef(`system/userAlarms/${key}`), { dismissed: true }));
-        }
-
-        // dismissed 아니고 5분 미만인 항목만, sender별 가장 최신 1개만 표시
-        const allActive = Object.entries(allAlarms)
-            .map(([key, value]) => ({ key, ...value }))
-            .filter((alarm) => !alarm.dismissed && now - alarm.timestamp < fiveMin)
-            .sort((a, b) => b.timestamp - a.timestamp);
-
-        // sender별 중복 제거 — 가장 최신 1건만 남김
-        const seenSenders = new Set();
-        const active = allActive.filter((alarm) => {
-            if (seenSenders.has(alarm.sender)) return false;
-            seenSenders.add(alarm.sender);
-            return true;
-        });
-
-        if (active.length === 0) {
-            alarmBanner.classList.add("hidden");
-            clearAllAlarmBlink();
-            return;
-        }
-
-        alarmList.innerHTML = active.map((alarm) => (
-            `<div style="padding:4px 0; border-bottom:1px solid #ffd0d0; display:flex; justify-content:space-between; align-items:center;">
-                <span>&#128276; <b>${alarm.sender}</b> (${formatElapsedTime(now - alarm.timestamp)})</span>
-                <button onclick="dismissAlarmBySender('${alarm.sender}')" style="background:#8e8e93;color:#fff;border:none;border-radius:3px;padding:2px 8px;font-size:11px;cursor:pointer;">끄기</button>
-            </div>`
-        )).join("");
-
-        state.currentAlarmSenders = new Set(active.map((alarm) => alarm.sender));
-        alarmBanner.classList.remove("hidden");
-        applyAlarmBlinkToBoxes(state.currentAlarmSenders);
-    });
-}
-
-// sender 기준으로 해당 사람의 모든 알림을 dismissed 처리
-export async function dismissAlarmBySender(sender) {
-    try {
-        const snap = await get(dbRef("system/userAlarms"));
-        if (!snap.exists()) return;
-        const all = snap.val();
-        const tasks = Object.entries(all)
-            .filter(([, v]) => v.sender === sender && !v.dismissed)
-            .map(([key]) => update(dbRef(`system/userAlarms/${key}`), { dismissed: true }));
-        await Promise.all(tasks);
-    } catch (error) {
-        console.error("알림 끄기 실패:", error);
-    }
-}
-
-export async function dismissAlarm(key) {
-    try {
-        await update(dbRef(`system/userAlarms/${key}`), { dismissed: true });
-    } catch (error) {
-        console.error("알림 끄기 실패:", error);
-    }
+export function stopListeningToAdminBoard() {
+    unsubscribeAdminNumbers?.();
+    unsubscribeAdminConfig?.();
+    unsubscribeAdminNumbers = null;
+    unsubscribeAdminConfig = null;
 }
 
 export async function resetAllPasswords() {
@@ -150,38 +52,12 @@ export async function resetAllPasswords() {
     }
 
     try {
-        const whitelistSnap = await get(dbRef("system/whitelist"));
-        if (!whitelistSnap.exists()) {
-            alert("등록된 직원 명단이 없습니다.");
-            return;
-        }
-
-        const names = Object.keys(whitelistSnap.val());
-        // users/ 비밀번호 삭제
-        const tasks = names.map((name) => remove(dbRef(`users/${name}`)));
-        await Promise.all(tasks);
-
-        // system/resetRequests 전체 삭제 — 이게 빠져서 T239232 같은 항목이 계속 남았던 원인
-        await remove(dbRef("system/resetRequests"));
-
-        alert(`총 ${names.length}명의 비밀번호가 전체 초기화되었습니다.\n(초기화 요청 대기 목록도 함께 초기화되었습니다.)`);
+        const callable = httpsCallable(functions, "resetAllEmployeePasswords");
+        const { data } = await callable();
+        alert(`총 ${data.resetUsers}명의 비밀번호가 전체 초기화되었습니다.\n(등록 기기 토큰과 초기화 요청도 함께 정리되었습니다.)`);
     } catch (error) {
         console.error("전체 PW 초기화 오류:", error);
         alert("초기화 실패. 다시 시도해주세요.");
-    }
-}
-
-export async function dismissAllAlarms() {
-    try {
-        const snap = await get(dbRef("system/userAlarms"));
-        if (!snap.exists()) {
-            return;
-        }
-
-        const tasks = Object.keys(snap.val()).map((key) => update(dbRef(`system/userAlarms/${key}`), { dismissed: true }));
-        await Promise.all(tasks);
-    } catch (error) {
-        console.error("전체 알림 끄기 실패:", error);
     }
 }
 
@@ -193,7 +69,7 @@ export async function adminForceClear(num, currentOccupant) {
     try {
         const timeStr = new Date().toLocaleTimeString("ko-KR", { hour12: false });
         await remove(dbRef(`system/boardState/numbers/${num}`));
-        await push(dbRef("system/boardState/log"), {
+        await push(usageLogRef(state.todayString), {
             time: timeStr,
             num,
             action: "관리자강제취소",
@@ -225,7 +101,7 @@ export async function adminResetAllNumbers() {
 
         const timeStr = new Date().toLocaleTimeString("ko-KR", { hour12: false });
         const tasks = Object.entries(numbers).map(([num, name]) =>
-            remove(dbRef(`system/boardState/numbers/${num}`)).then(() => push(dbRef("system/boardState/log"), {
+            remove(dbRef(`system/boardState/numbers/${num}`)).then(() => push(usageLogRef(state.todayString), {
                 time: timeStr,
                 num,
                 action: "관리자전체강제취소",
@@ -253,41 +129,72 @@ export async function requestPasswordReset() {
     }
 
     try {
-        await set(dbRef(`system/resetRequests/${id}`), true);
+        const callable = httpsCallable(functions, "requestLegacyPasswordReset");
+        await callable({ branchCode: state.currentBranch, userId: id });
         alert(`[${id}]님의 비밀번호 초기화를 관리자에게 요청했습니다.`);
     } catch (error) {
         alert("요청 전송 실패. 네트워크를 확인해주세요.");
     }
 }
 
-export function listenToResetRequests() {
-    onValue(dbRef("system/resetRequests"), (snap) => {
-        const badge = document.getElementById("reset-badge");
+let unsubscribeResetRequests = null;
+let unsubscribeResetWhitelist = null;
+let latestResetRequests = {};
+let latestResetWhitelist = {};
+let resetRequestsLoaded = false;
+let resetWhitelistLoaded = false;
 
-        if (!snap.exists() || !snap.val()) {
-            // Firebase에 데이터 없음 = 요청 없음. 캐시/이전 state 절대 사용 안 함
-            state.pendingResets = [];
-            badge.style.display = "none";
-            return;
-        }
+// resetRequests와 whitelist가 모두 로드된 뒤에만 대기자 목록을 다시 계산한다.
+// (whitelist에서 삭제된/과거 잔여 요청과 관리자 계정은 selectPendingResetUsers가 걸러낸다)
+function renderPendingResets() {
+    if (!resetRequestsLoaded || !resetWhitelistLoaded) {
+        return;
+    }
 
-        const data = snap.val();
-        // value가 정확히 true인 항목만 유효한 요청으로 간주
-        // key는 직원 이름(한글) or 사번이 될 수 있으나 실제 Firebase에 있는 값만 표시
-        const pendingNames = Object.entries(data)
-            .filter(([, v]) => v === true)
-            .map(([name]) => name);
-
-        state.pendingResets = pendingNames;
-
-        if (pendingNames.length > 0) {
-            badge.innerText = pendingNames.length;
-            badge.style.display = "inline-block";
-        } else {
-            state.pendingResets = [];
-            badge.style.display = "none";
-        }
+    const validNames = selectPendingResetUsers({
+        resetRequests: latestResetRequests,
+        whitelist: latestResetWhitelist
     });
+
+    state.pendingResets = validNames;
+
+    const badge = document.getElementById("reset-badge");
+    if (!badge) {
+        return;
+    }
+
+    if (validNames.length > 0) {
+        badge.innerText = validNames.length;
+        badge.style.display = "inline-block";
+    } else {
+        badge.style.display = "none";
+    }
+}
+
+// system 전체가 아닌 resetRequests·whitelist 두 경로만 각각 구독한다.
+export function listenToResetRequests() {
+    stopListeningToResetRequests();
+
+    unsubscribeResetRequests = onValue(dbRef("system/resetRequests"), (snap) => {
+        latestResetRequests = snap.exists() ? snap.val() || {} : {};
+        resetRequestsLoaded = true;
+        renderPendingResets();
+    });
+
+    unsubscribeResetWhitelist = onValue(dbRef("system/whitelist"), (snap) => {
+        latestResetWhitelist = snap.exists() ? snap.val() || {} : {};
+        resetWhitelistLoaded = true;
+        renderPendingResets();
+    });
+}
+
+export function stopListeningToResetRequests() {
+    unsubscribeResetRequests?.();
+    unsubscribeResetWhitelist?.();
+    unsubscribeResetRequests = null;
+    unsubscribeResetWhitelist = null;
+    resetRequestsLoaded = false;
+    resetWhitelistLoaded = false;
 }
 
 export function toggleWhitelistDropdown() {
@@ -349,8 +256,8 @@ export async function deleteUser() {
     }
 
     try {
-        await remove(dbRef(`system/whitelist/${id}`));
-        await remove(dbRef(`users/${id}`));
+        const callable = httpsCallable(functions, "deleteEmployeeAccount");
+        await callable({ userId: id });
         alert(`[${id}] 계정이 삭제되었습니다.`);
         document.getElementById("admin-target-user").value = "";
         await renderWhitelist();
@@ -374,12 +281,10 @@ export async function resetUserPassword() {
     }
 
     try {
-        const userSnap = await get(dbRef(`users/${id}`));
         const whitelistSnap = await get(dbRef(`system/whitelist/${id}`));
-        if (userSnap.exists() || whitelistSnap.exists()) {
-            await remove(dbRef(`users/${id}`));
-            await set(dbRef(`system/whitelist/${id}`), true);
-            await remove(dbRef(`system/resetRequests/${id}`));
+        if (whitelistSnap.exists()) {
+            const callable = httpsCallable(functions, "resetEmployeePassword");
+            await callable({ userId: id });
             alert(`[${id}]님의 비밀번호가 초기화되었습니다.\n다시 로그인할 때 입력하는 새로운 비밀번호가 계정 비밀번호로 확정됩니다.`);
             document.getElementById("admin-target-user").value = "";
         } else {
@@ -425,15 +330,6 @@ export async function toggleDisableNumber() {
         alert(`${num}번 상태가 변경되었습니다.`);
     } catch (error) {
         alert("상태 변경 실패.");
-    }
-}
-
-export async function sendGlobalAlarm() {
-    try {
-        await set(dbRef("system/alarm"), { timestamp: Date.now() });
-        alert("미반납자 전체에게 퇴근 경고 알람이 전송되었습니다.");
-    } catch (error) {
-        alert("알람 전송 실패.");
     }
 }
 

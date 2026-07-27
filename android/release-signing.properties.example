@@ -1,0 +1,5 @@
+# Keep the real file outside the repository or ignore it locally.
+storeFile=C:/Users/your-name/Documents/TAS-WT-Release/signing/tas-wt-release.jks
+storePassword=replace-with-local-secret
+keyAlias=tas-wt-release
+keyPassword=replace-with-local-secret

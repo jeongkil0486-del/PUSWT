@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TAS WT</string>
+    <string name="title_activity_main">TAS WT</string>
+    <string name="package_name">com.taswt.walkietalkie</string>
+    <string name="custom_url_scheme">com.taswt.walkietalkie</string>
+</resources>
