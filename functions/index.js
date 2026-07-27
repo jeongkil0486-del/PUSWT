@@ -6,6 +6,7 @@ import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
 import { collectDevices, selectTargetUsers } from "./lib/audience.js";
+import { branchPath } from "./lib/database-path.js";
 
 initializeApp();
 
@@ -29,11 +30,6 @@ function normalizeBranch(value) {
     const branch = String(value || "").toUpperCase();
     if (!BRANCHES.has(branch)) throw new HttpsError("invalid-argument", "지원하지 않는 지점입니다.");
     return branch;
-}
-
-function branchPath(branch, path = "") {
-    const prefix = branch === "PUS" ? "" : `branches/${branch}/`;
-    return `${prefix}${path}`.replace(/\/$/, "");
 }
 
 function loginEmail(branch, userId) {
