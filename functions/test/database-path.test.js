@@ -12,7 +12,7 @@ test("PUS child paths stay at the database root", () => {
 });
 
 test("other branches stay below their branch roots", () => {
-    for (const branch of ["TAE", "CJJ", "GMP"]) {
+    for (const branch of ["TAE", "CJJ", "GMP", "CJU", "KWJ", "ICN"]) {
         assert.equal(branchPath(branch), `branches/${branch}`);
         assert.equal(
             branchPath(branch, "system/whitelist"),
@@ -21,12 +21,23 @@ test("other branches stay below their branch roots", () => {
     }
 });
 
+test("신규 지점(제주/광주/인천)은 각자의 branches/{code} 경로 아래에만 있다", () => {
+    assert.equal(branchPath("CJU", "system/whitelist"), "branches/CJU/system/whitelist");
+    assert.equal(branchPath("KWJ", "system/whitelist"), "branches/KWJ/system/whitelist");
+    assert.equal(branchPath("ICN", "system/whitelist"), "branches/ICN/system/whitelist");
+});
+
 test("PUS and other branch paths do not overlap", () => {
     const pusPath = branchPath("PUS", "users/example");
 
-    for (const branch of ["TAE", "CJJ", "GMP"]) {
+    for (const branch of ["TAE", "CJJ", "GMP", "CJU", "KWJ", "ICN"]) {
         const branchUserPath = branchPath(branch, "users/example");
         assert.notEqual(branchUserPath, pusPath);
         assert.match(branchUserPath, new RegExp(`^branches/${branch}/`));
     }
+});
+
+test("신규 지점끼리도 서로 경로가 겹치지 않는다", () => {
+    const paths = ["CJU", "KWJ", "ICN"].map((branch) => branchPath(branch, "system/boardState"));
+    assert.equal(new Set(paths).size, paths.length);
 });

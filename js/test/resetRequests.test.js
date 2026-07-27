@@ -40,6 +40,17 @@ test("whitelist에서 직원이 빠지면 더 이상 목록에 나타나지 않�
     );
 });
 
+test("신규 지점 관리자 계정(CJUWT/KWJWT/ICNWT)은 기본 관리자 목록으로 자동 제외된다", () => {
+    const newBranchWhitelist = { 전정길: true, CJUWT: true, KWJWT: true, ICNWT: true };
+    const newBranchResetRequests = { 전정길: true, CJUWT: true, KWJWT: true, ICNWT: true };
+
+    // adminIds를 넘기지 않아 기본값(RESET_REQUEST_ADMIN_IDS)으로 판정한다
+    assert.deepEqual(
+        selectPendingResetUsers({ resetRequests: newBranchResetRequests, whitelist: newBranchWhitelist }),
+        ["전정길"]
+    );
+});
+
 test("한글 로케일 기준으로 안정적으로 정렬한다", () => {
     const result = selectPendingResetUsers({
         resetRequests: { 황보림: true, 김민재: true, 배수아: true },

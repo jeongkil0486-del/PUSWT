@@ -1,4 +1,4 @@
-export const RESET_REQUEST_ADMIN_IDS = new Set(["PUSWT", "TAEWT", "CJJWT", "GMPWT"]);
+export const RESET_REQUEST_ADMIN_IDS = new Set(["PUSWT", "TAEWT", "CJJWT", "GMPWT", "CJUWT", "KWJWT", "ICNWT"]);
 
 // 초기화 요청 대기자로 표시할 사용자를 계산한다. 다음을 모두 만족해야 한다.
 // 1) resetRequests[userId] === true

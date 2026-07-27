@@ -84,7 +84,10 @@ npx firebase-tools functions:secrets:set LEGACY_ADMIN_CREDENTIALS_JSON
   "PUS": { "PUSWT": "실제 비밀번호" },
   "TAE": { "TAEWT": "실제 비밀번호" },
   "CJJ": { "CJJWT": "실제 비밀번호" },
-  "GMP": { "GMPWT": "실제 비밀번호" }
+  "GMP": { "GMPWT": "실제 비밀번호" },
+  "CJU": { "CJUWT": "실제 비밀번호" },
+  "KWJ": { "KWJWT": "실제 비밀번호" },
+  "ICN": { "ICNWT": "실제 비밀번호" }
 }
 ```
 

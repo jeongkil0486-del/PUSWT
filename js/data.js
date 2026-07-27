@@ -2,8 +2,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getDatabase, ref, set, get, update, remove, onValue, push, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFunctions } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+import { DEFAULT_BRANCH, BRANCH_OPTIONS, normalizeBranch } from "./lib/branches.js";
 
 export { ref, set, get, update, remove, onValue, push, runTransaction };
+export { DEFAULT_BRANCH, BRANCH_OPTIONS, normalizeBranch };
 
 export const firebaseConfig = {
     apiKey: "AIzaSyDlcAR1IJ-GM_13wH8XTd2BhVcvs9fZGd8",
@@ -17,14 +19,6 @@ export const firebaseConfig = {
 };
 
 export const APP_DISPLAY_NAME = "TAS Walkie-Talkie";
-export const DEFAULT_BRANCH = "PUS";
-
-export const BRANCH_OPTIONS = [
-    { code: "PUS", label: "부산" },
-    { code: "TAE", label: "대구" },
-    { code: "CJJ", label: "청주" },
-    { code: "GMP", label: "김포" }
-];
 
 const app = initializeApp(firebaseConfig);
 
@@ -53,11 +47,6 @@ export const screens = {
     main: document.getElementById("main-screen"),
     admin: document.getElementById("admin-screen")
 };
-
-export function normalizeBranch(branchCode) {
-    const normalized = String(branchCode || DEFAULT_BRANCH).toUpperCase();
-    return BRANCH_OPTIONS.some((branch) => branch.code === normalized) ? normalized : DEFAULT_BRANCH;
-}
 
 export function getBranchLabel(branchCode = state.currentBranch) {
     const normalized = normalizeBranch(branchCode);

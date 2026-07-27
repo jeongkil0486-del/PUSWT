@@ -13,8 +13,8 @@ initializeApp();
 
 const legacyAdminCredentials = defineSecret("LEGACY_ADMIN_CREDENTIALS_JSON");
 const REGION = "asia-northeast3";
-const BRANCHES = new Set(["PUS", "TAE", "CJJ", "GMP"]);
-const ADMIN_IDS = new Set(["PUSWT", "TAEWT", "CJJWT", "GMPWT"]);
+const BRANCHES = new Set(["PUS", "TAE", "CJJ", "GMP", "CJU", "KWJ", "ICN"]);
+const ADMIN_IDS = new Set(["PUSWT", "TAEWT", "CJJWT", "GMPWT", "CJUWT", "KWJWT", "ICNWT"]);
 const INVALID_TOKEN_CODES = new Set([
     "messaging/invalid-registration-token",
     "messaging/registration-token-not-registered"
