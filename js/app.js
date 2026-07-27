@@ -268,8 +268,20 @@ async function init() {
 
     const restored = await restoreAutoLogin();
     if (!restored) {
+        resetLoginForm();
         switchScreen("login");
     }
+}
+
+// 로그아웃/세션 만료로 로그인 화면을 다시 보여줄 때, WebView가 이전 입력값이나
+// composition 상태를 들고 있지 않도록 값만 비운다(자동 focus는 하지 않음).
+// 로그인 "실패"(handleLogin의 catch)는 이 함수를 호출하지 않으므로 사용자가
+// 입력한 값은 그대로 남는다.
+function resetLoginForm() {
+    const idInput = document.getElementById("login-id");
+    const pwInput = document.getElementById("login-pw");
+    if (idInput) idInput.value = "";
+    if (pwInput) pwInput.value = "";
 }
 
 window.addEventListener("load", init);

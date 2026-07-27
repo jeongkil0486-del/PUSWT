@@ -939,10 +939,17 @@ button {
     text-align: center;
 }
 
-/* 로그인 ID 입력: placeholder와 실제 입력값 모두 중앙 정렬한다.
-   (커서 강제 이동/composition 개입 없이 text-align만 적용하므로 IME 안정성에는 영향 없음) */
+/* 로그인 ID 입력: 평소(placeholder 또는 입력 완료 후 blur 상태)에는 중앙 정렬한다.
+   단, focus 중(실제로 타이핑/한글 조합 중)에는 왼쪽 정렬로 고정해 시작 위치가
+   움직이지 않게 한다. text-align:center를 켠 채로 매 keystroke마다 문자열 폭이
+   바뀌면 실기기(삼성 WebView + 키보드)에서 조합 위치가 밀리는 현상이 있었다.
+   caret/selection/value는 전혀 건드리지 않고 순수 CSS로만 처리한다. */
 .control-input-id {
     text-align: center;
+}
+
+.control-input-id:focus {
+    text-align: left;
 }
 
 .control-input::placeholder {
