@@ -102,6 +102,104 @@ export function isNativeAndroid() {
     return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
 }
 
+let androidImeLogin = null;
+
+// Android WebView에서만 실제 IME input을 backdrop-filter/레이아웃 트리 밖으로
+// 이동한다. 화면에는 원래 위치의 display가 보이고, input 값은 IME만 변경한다.
+export function initializeAndroidImeSafeLogin() {
+    if (!isNativeAndroid() || androidImeLogin) return;
+
+    const input = document.getElementById("login-id");
+    const row = input?.closest(".control-row");
+    const anchor = input?.parentElement;
+    if (!input || !row || !anchor) return;
+
+    const display = document.createElement("span");
+    display.id = "login-id-display";
+    display.className = "control-input control-display android-ime-display";
+    display.setAttribute("aria-hidden", "true");
+    display.textContent = input.value || "ID";
+
+    input.replaceWith(display);
+    document.body.appendChild(input);
+    input.classList.remove("control-input-centered");
+    input.classList.add("android-ime-native-input");
+
+    let isComposing = false;
+    let isActive = false;
+
+    const updateDisplay = () => {
+        display.textContent = input.value || "ID";
+    };
+
+    const syncPosition = () => {
+        if (!isActive || isComposing) return;
+        const rect = anchor.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        input.style.left = `${rect.left}px`;
+        input.style.top = `${rect.top}px`;
+        input.style.width = `${rect.width}px`;
+        input.style.height = `${rect.height}px`;
+    };
+
+    const setActive = (active) => {
+        isActive = active;
+        input.classList.toggle("android-ime-native-input-active", active);
+        if (active) {
+            requestAnimationFrame(syncPosition);
+        } else {
+            row.classList.remove("ime-active");
+            input.blur();
+        }
+    };
+
+    input.addEventListener("focus", () => {
+        row.classList.add("ime-active");
+        syncPosition();
+    });
+    input.addEventListener("blur", () => row.classList.remove("ime-active"));
+    input.addEventListener("compositionstart", () => {
+        isComposing = true;
+    });
+    input.addEventListener("compositionupdate", updateDisplay);
+    input.addEventListener("compositionend", () => {
+        updateDisplay();
+        isComposing = false;
+        requestAnimationFrame(syncPosition);
+    });
+    input.addEventListener("input", updateDisplay);
+
+    window.addEventListener("resize", syncPosition, { passive: true });
+    window.addEventListener("scroll", syncPosition, { passive: true });
+    window.visualViewport?.addEventListener("resize", syncPosition, { passive: true });
+    window.visualViewport?.addEventListener("scroll", syncPosition, { passive: true });
+
+    androidImeLogin = {
+        input,
+        display,
+        syncPosition,
+        setActive,
+        reset() {
+            isComposing = false;
+            input.value = "";
+            display.textContent = "ID";
+            row.classList.remove("ime-active");
+        }
+    };
+}
+
+export function setAndroidImeLoginActive(active) {
+    androidImeLogin?.setActive(active);
+}
+
+export function syncAndroidImeLoginPosition() {
+    androidImeLogin?.syncPosition();
+}
+
+export function resetAndroidImeLogin() {
+    androidImeLogin?.reset();
+}
+
 let appStateHandlers = null;
 let appStateListenerRegistered = false;
 

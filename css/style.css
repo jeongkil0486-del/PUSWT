@@ -865,6 +865,11 @@ button {
     box-shadow: 0 0 0 4px rgba(47, 113, 255, 0.12), 0 8px 18px rgba(11, 40, 98, 0.1);
 }
 
+.control-row.ime-active {
+    border-color: #2f71ff;
+    box-shadow: 0 0 0 4px rgba(47, 113, 255, 0.12), 0 8px 18px rgba(11, 40, 98, 0.1);
+}
+
 .control-balance,
 .control-trailing {
     width: var(--login-control-slot-width);
@@ -937,6 +942,40 @@ button {
 
 .control-input-centered {
     text-align: center;
+}
+
+.android-ime-display {
+    width: 100%;
+    overflow: hidden;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.android-ime-native-input {
+    position: fixed;
+    z-index: 1000;
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    caret-color: transparent;
+    text-align: left;
+    transform: none;
+    filter: none;
+    box-shadow: none;
+    animation: none;
+    transition: none;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.android-ime-native-input-active {
+    visibility: visible;
+    pointer-events: auto;
 }
 
 .control-input::placeholder {

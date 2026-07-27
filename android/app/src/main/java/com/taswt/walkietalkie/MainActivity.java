@@ -2,8 +2,10 @@ package com.taswt.walkietalkie;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.pm.ApplicationInfo;
 import android.os.Build;
 import android.os.Bundle;
+import android.webkit.WebView;
 
 import androidx.core.view.WindowCompat;
 
@@ -18,6 +20,9 @@ public class MainActivity extends BridgeActivity {
         // 이렇게 해야 WebView가 시스템 바 인셋을 받아 CSS env(safe-area-inset-*)
         // 값을 정상적으로 계산할 수 있다. 상태바 자체를 숨기지는 않는다.
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        boolean isDebuggable =
+            (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        WebView.setWebContentsDebuggingEnabled(isDebuggable);
         createNotificationChannels();
     }
 

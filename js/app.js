@@ -49,9 +49,13 @@ import { exportExcel } from "./excel.js";
 import { authenticateUser, logoutFirebase } from "./auth.js";
 import {
     deactivateCurrentDeviceToken,
+    initializeAndroidImeSafeLogin,
     initializePushForLogin,
     registerAppStateListener,
-    registerBackButtonListener
+    registerBackButtonListener,
+    resetAndroidImeLogin,
+    setAndroidImeLoginActive,
+    syncAndroidImeLoginPosition
 } from "./native.js";
 import {
     stopListeningToNotificationHistory,
@@ -98,6 +102,7 @@ function stopAllBoardListeners() {
 }
 
 function processLoginAction(id, adminFlag) {
+    setAndroidImeLoginActive(false);
     state.currentUser = id;
     state.isAdmin = adminFlag;
     saveSession(id, adminFlag, state.currentBranch);
@@ -262,6 +267,7 @@ async function init() {
     switchScreen("loading");
     renderBranchOptions();
     syncBranchSelection(restoreSelectedBranch());
+    initializeAndroidImeSafeLogin();
     bindEvents();
     registerBackButtonListener();
     state.todayString = "";
@@ -270,6 +276,8 @@ async function init() {
     if (!restored) {
         resetLoginForm();
         switchScreen("login");
+        setAndroidImeLoginActive(true);
+        syncAndroidImeLoginPosition();
     }
 }
 
@@ -282,6 +290,7 @@ function resetLoginForm() {
     const pwInput = document.getElementById("login-pw");
     if (idInput) idInput.value = "";
     if (pwInput) pwInput.value = "";
+    resetAndroidImeLogin();
 }
 
 window.addEventListener("load", init);
