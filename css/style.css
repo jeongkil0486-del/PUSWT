@@ -939,13 +939,9 @@ button {
     text-align: center;
 }
 
-/* 로그인 ID 입력: 값이 없을 때만 중앙 정렬(placeholder), 입력이 시작되면
-   왼쪽 고정 위치에서 입력되게 해 한글 IME 조합 중 좌우로 흔들리지 않게 한다. */
+/* 로그인 ID 입력: placeholder와 실제 입력값 모두 중앙 정렬한다.
+   (커서 강제 이동/composition 개입 없이 text-align만 적용하므로 IME 안정성에는 영향 없음) */
 .control-input-id {
-    text-align: left;
-}
-
-.control-input-id:placeholder-shown {
     text-align: center;
 }
 
