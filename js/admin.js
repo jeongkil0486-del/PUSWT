@@ -2,6 +2,7 @@ import { dbRef, usageLogRef, set, get, update, remove, onValue, push, state } fr
 import { functions } from "./data.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 import { renderGrid } from "./ui.js";
+import { selectPendingResetUsers } from "./lib/resetRequests.js";
 
 let unsubscribeAdminNumbers = null;
 let unsubscribeAdminConfig = null;
@@ -137,41 +138,63 @@ export async function requestPasswordReset() {
 }
 
 let unsubscribeResetRequests = null;
+let unsubscribeResetWhitelist = null;
+let latestResetRequests = {};
+let latestResetWhitelist = {};
+let resetRequestsLoaded = false;
+let resetWhitelistLoaded = false;
 
+// resetRequests와 whitelist가 모두 로드된 뒤에만 대기자 목록을 다시 계산한다.
+// (whitelist에서 삭제된/과거 잔여 요청과 관리자 계정은 selectPendingResetUsers가 걸러낸다)
+function renderPendingResets() {
+    if (!resetRequestsLoaded || !resetWhitelistLoaded) {
+        return;
+    }
+
+    const validNames = selectPendingResetUsers({
+        resetRequests: latestResetRequests,
+        whitelist: latestResetWhitelist
+    });
+
+    state.pendingResets = validNames;
+
+    const badge = document.getElementById("reset-badge");
+    if (!badge) {
+        return;
+    }
+
+    if (validNames.length > 0) {
+        badge.innerText = validNames.length;
+        badge.style.display = "inline-block";
+    } else {
+        badge.style.display = "none";
+    }
+}
+
+// system 전체가 아닌 resetRequests·whitelist 두 경로만 각각 구독한다.
 export function listenToResetRequests() {
     stopListeningToResetRequests();
+
     unsubscribeResetRequests = onValue(dbRef("system/resetRequests"), (snap) => {
-        const badge = document.getElementById("reset-badge");
+        latestResetRequests = snap.exists() ? snap.val() || {} : {};
+        resetRequestsLoaded = true;
+        renderPendingResets();
+    });
 
-        if (!snap.exists() || !snap.val()) {
-            // Firebase에 데이터 없음 = 요청 없음. 캐시/이전 state 절대 사용 안 함
-            state.pendingResets = [];
-            badge.style.display = "none";
-            return;
-        }
-
-        const data = snap.val();
-        // value가 정확히 true인 항목만 유효한 요청으로 간주
-        // key는 직원 이름(한글) or 사번이 될 수 있으나 실제 Firebase에 있는 값만 표시
-        const pendingNames = Object.entries(data)
-            .filter(([, v]) => v === true)
-            .map(([name]) => name);
-
-        state.pendingResets = pendingNames;
-
-        if (pendingNames.length > 0) {
-            badge.innerText = pendingNames.length;
-            badge.style.display = "inline-block";
-        } else {
-            state.pendingResets = [];
-            badge.style.display = "none";
-        }
+    unsubscribeResetWhitelist = onValue(dbRef("system/whitelist"), (snap) => {
+        latestResetWhitelist = snap.exists() ? snap.val() || {} : {};
+        resetWhitelistLoaded = true;
+        renderPendingResets();
     });
 }
 
 export function stopListeningToResetRequests() {
     unsubscribeResetRequests?.();
+    unsubscribeResetWhitelist?.();
     unsubscribeResetRequests = null;
+    unsubscribeResetWhitelist = null;
+    resetRequestsLoaded = false;
+    resetWhitelistLoaded = false;
 }
 
 export function toggleWhitelistDropdown() {
