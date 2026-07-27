@@ -7,6 +7,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
 import { collectDevices, selectTargetUsers } from "./lib/audience.js";
 import { branchPath } from "./lib/database-path.js";
+import { updateMigratedUser } from "./lib/user-migration.js";
 
 initializeApp();
 
@@ -115,7 +116,7 @@ export const migrateLegacyLogin = onCall({
     const migratedAt = Date.now();
     await root.child(`authMigrations/${userId}`).update({ uid, role, migratedAt });
     if (role === "user") {
-        await root.child(`users/${userId}`).set({ role: "user", authUid: uid, migratedAt });
+        await updateMigratedUser(root.child(`users/${userId}`), { uid, migratedAt });
     }
     return { customToken: await auth.createCustomToken(uid), role, branch };
 });
