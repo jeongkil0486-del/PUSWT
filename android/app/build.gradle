@@ -1,5 +1,34 @@
 apply plugin: 'com.android.application'
 
+def releaseSigningProperties = new Properties()
+def releaseSigningPropertiesPath = System.getenv('TAS_WT_SIGNING_PROPERTIES')
+def releaseSigningPropertiesFile = releaseSigningPropertiesPath
+        ? file(releaseSigningPropertiesPath)
+        : new File(System.getProperty('user.home'), 'Documents/TAS-WT-Release/signing/release-signing.properties')
+def hasReleaseSigningProperties = releaseSigningPropertiesFile.exists()
+
+if (hasReleaseSigningProperties) {
+    releaseSigningPropertiesFile.withInputStream { releaseSigningProperties.load(it) }
+    def requiredReleaseSigningKeys = ['storeFile', 'storePassword', 'keyAlias', 'keyPassword']
+    def missingReleaseSigningKeys = requiredReleaseSigningKeys.findAll {
+        !releaseSigningProperties[it]?.toString()?.trim()
+    }
+    if (!missingReleaseSigningKeys.isEmpty()) {
+        throw new GradleException("Release signing properties are incomplete: ${missingReleaseSigningKeys.join(', ')}")
+    }
+}
+
+gradle.taskGraph.whenReady { taskGraph ->
+    def releaseBuildRequested = taskGraph.hasTask(':app:assembleRelease') ||
+            taskGraph.hasTask(':app:bundleRelease')
+    if (releaseBuildRequested && !hasReleaseSigningProperties) {
+        throw new GradleException(
+                "Release signing properties not found. Set TAS_WT_SIGNING_PROPERTIES or create " +
+                        "${releaseSigningPropertiesFile.absolutePath}"
+        )
+    }
+}
+
 android {
     namespace "com.taswt.walkietalkie"
     compileSdk rootProject.ext.compileSdkVersion
@@ -8,16 +37,31 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
-            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        release {
+            if (hasReleaseSigningProperties) {
+                storeFile file(releaseSigningProperties['storeFile'])
+                storePassword releaseSigningProperties['storePassword']
+                keyAlias releaseSigningProperties['keyAlias']
+                keyPassword releaseSigningProperties['keyPassword']
+                v1SigningEnabled true
+                v2SigningEnabled true
+            }
         }
     }
     buildTypes {
         release {
+            if (hasReleaseSigningProperties) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

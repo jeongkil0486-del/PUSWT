@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#10295f">
+  <title>TAS WT 설치</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Pretendard, "Noto Sans KR", Arial, sans-serif;
+      background: #eef3fb;
+      color: #16233d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 28px 18px;
+      background:
+        radial-gradient(circle at top, rgba(42, 117, 232, .18), transparent 38rem),
+        linear-gradient(160deg, #f7faff, #e7eef9);
+    }
+    main {
+      width: min(100%, 620px);
+      padding: clamp(26px, 6vw, 48px);
+      border: 1px solid rgba(16, 41, 95, .12);
+      border-radius: 28px;
+      background: rgba(255, 255, 255, .96);
+      box-shadow: 0 24px 70px rgba(16, 41, 95, .16);
+    }
+    header { text-align: center; }
+    .icon {
+      width: 104px;
+      height: 104px;
+      border-radius: 23px;
+      box-shadow: 0 12px 28px rgba(16, 41, 95, .24);
+    }
+    h1 { margin: 20px 0 5px; font-size: 2rem; color: #10295f; }
+    .subtitle { margin: 0; color: #61708d; }
+    .meta {
+      margin: 28px 0 22px;
+      padding: 18px 20px;
+      border-radius: 16px;
+      background: #f3f6fc;
+      line-height: 1.75;
+    }
+    .meta div { display: flex; gap: 18px; justify-content: space-between; }
+    .meta span:first-child { color: #6a7690; }
+    .hash {
+      overflow-wrap: anywhere;
+      text-align: right;
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: .78rem;
+    }
+    .download {
+      display: block;
+      width: 100%;
+      padding: 17px 20px;
+      border-radius: 15px;
+      background: #173f91;
+      color: white;
+      text-align: center;
+      text-decoration: none;
+      font-size: 1.08rem;
+      font-weight: 800;
+      box-shadow: 0 10px 22px rgba(23, 63, 145, .24);
+    }
+    .download:active { transform: translateY(1px); }
+    section { margin-top: 30px; }
+    h2 { margin-bottom: 12px; font-size: 1.1rem; color: #17376f; }
+    ol, ul { margin: 0; padding-left: 22px; line-height: 1.75; }
+    .notice {
+      padding: 17px 18px;
+      border-left: 4px solid #2a75e8;
+      border-radius: 10px;
+      background: #edf5ff;
+    }
+    .notice ul { padding-left: 18px; }
+    footer { margin-top: 28px; text-align: center; color: #7b879e; font-size: .85rem; }
+    @media (max-width: 420px) {
+      main { border-radius: 22px; }
+      .meta div { display: block; margin-bottom: 9px; }
+      .hash { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <img class="icon" src="/assets/icon-512.png" alt="TAS WT 앱 아이콘">
+      <h1>TAS WT</h1>
+      <p class="subtitle">Android 전용 설치 파일</p>
+    </header>
+
+    <div class="meta" aria-label="앱 파일 정보">
+      <div><span>현재 버전</span><strong>1.0.0</strong></div>
+      <div><span>파일 크기</span><strong>6.41 MiB (6,723,651 bytes)</strong></div>
+      <div><span>업데이트</span><strong>2026-07-27</strong></div>
+      <div><span>SHA-256</span><strong class="hash">59A1A9F9FA4B3764CA4908E6EBE6AF42A53D1BF8F3B1C8E40F986FF3AFFB922E</strong></div>
+    </div>
+
+    <a class="download" href="/downloads/TAS-WT.apk" download="TAS-WT.apk">TAS WT 다운로드</a>
+
+    <section>
+      <h2>설치 방법</h2>
+      <ol>
+        <li>TAS WT 다운로드 버튼 선택</li>
+        <li>다운로드된 TAS-WT.apk 파일 열기</li>
+        <li>설치 권한 안내가 나오면 해당 브라우저의 앱 설치 허용</li>
+        <li>설치 선택</li>
+        <li>설치 후 TAS WT 실행</li>
+      </ol>
+    </section>
+
+    <section class="notice">
+      <h2>보안 안내</h2>
+      <ul>
+        <li>Android 전용 앱입니다.</li>
+        <li>직원의 Google 계정은 필요하지 않습니다.</li>
+        <li>회사에서 전달한 공식 링크를 통해서만 설치하세요.</li>
+        <li>기존 정식 TAS WT가 설치되어 있으면 업데이트 설치됩니다.</li>
+      </ul>
+    </section>
+
+    <footer>TAS WT · 사내 직원용</footer>
+  </main>
+</body>
+</html>
