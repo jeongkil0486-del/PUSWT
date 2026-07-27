@@ -48,6 +48,7 @@ export const state = {
 };
 
 export const screens = {
+    loading: document.getElementById("loading-screen"),
     login: document.getElementById("login-screen"),
     main: document.getElementById("main-screen"),
     admin: document.getElementById("admin-screen")

@@ -47,10 +47,18 @@ import {
 } from "./admin.js";
 import { exportExcel } from "./excel.js";
 import { authenticateUser, logoutFirebase } from "./auth.js";
-import { deactivateCurrentDeviceToken, initializePushForLogin, registerAppStateListener } from "./native.js";
 import {
-    listenToNotificationHistory,
+    deactivateCurrentDeviceToken,
+    initializePushForLogin,
+    registerAppStateListener,
+    registerBackButtonListener
+} from "./native.js";
+import {
     stopListeningToNotificationHistory,
+    reattachNotificationHistoryListenerIfOpen,
+    closeNotificationHistoryPanel,
+    openNotificationHistoryPanel,
+    handleNotificationHistoryBackdropClick,
     sendGeneralNotification,
     sendUrgentNotification
 } from "./notifications.js";
@@ -101,7 +109,8 @@ function processLoginAction(id, adminFlag) {
             if (state.isAdmin) {
                 listenToAdminBoard();
                 listenToResetRequests();
-                listenToNotificationHistory();
+                // 알림 이력은 팝업이 실제로 열려 있을 때만 다시 구독한다.
+                reattachNotificationHistoryListenerIfOpen();
             } else {
                 listenToBoard();
             }
@@ -113,7 +122,6 @@ function processLoginAction(id, adminFlag) {
         updateBranchBadges();
         listenToAdminBoard();
         listenToResetRequests();
-        listenToNotificationHistory();
         return;
     }
 
@@ -149,6 +157,9 @@ function togglePasswordVisibility() {
     toggleButton.classList.toggle("active", isPassword);
 }
 
+// 한글 IME 조합 입력이 불안정해지지 않도록, 사용자가 input을 직접 누른 경우에는
+// 아무 것도 하지 않고 커서 위치도 강제로 옮기지 않는다. 행의 여백을 눌렀을 때만
+// input에 포커스를 준다(그 이상 커서/선택 영역은 건드리지 않음).
 function bindFocusableControlRows() {
     document.querySelectorAll(".control-row-focusable").forEach((row) => {
         row.addEventListener("click", (event) => {
@@ -158,15 +169,11 @@ function bindFocusableControlRows() {
 
             const targetId = row.dataset.focusTarget;
             const input = targetId ? document.getElementById(targetId) : null;
-            if (!input) {
+            if (!input || event.target === input) {
                 return;
             }
 
             input.focus();
-            if (typeof input.setSelectionRange === "function") {
-                const valueLength = input.value.length;
-                input.setSelectionRange(valueLength, valueLength);
-            }
         });
     });
 }
@@ -183,6 +190,7 @@ function bindEvents() {
     document.getElementById("btn-mode-charge").addEventListener("click", () => setMode("충전중"));
     document.getElementById("btn-edit-mode").addEventListener("click", (event) => toggleEditMode(event.currentTarget));
     const handleLogout = async () => {
+        closeNotificationHistoryPanel();
         await deactivateCurrentDeviceToken();
         await logoutFirebase();
         logoutAction();
@@ -203,6 +211,9 @@ function bindEvents() {
     document.getElementById("btn-toggle-disable").addEventListener("click", toggleDisableNumber);
     document.getElementById("btn-send-urgent").addEventListener("click", sendUrgentNotification);
     document.getElementById("btn-send-general").addEventListener("click", sendGeneralNotification);
+    document.getElementById("btn-notification-history").addEventListener("click", openNotificationHistoryPanel);
+    document.getElementById("btn-notification-history-close").addEventListener("click", closeNotificationHistoryPanel);
+    document.getElementById("notification-history-panel").addEventListener("click", handleNotificationHistoryBackdropClick);
     document.getElementById("btn-export-excel").addEventListener("click", exportExcel);
     document.getElementById("btn-seat-names").addEventListener("click", openSeatNamesPanel);
     document.getElementById("btn-seat-names-close").addEventListener("click", closeSeatNamesPanel);
@@ -210,42 +221,55 @@ function bindEvents() {
     document.getElementById("btn-seat-names-reset").addEventListener("click", resetSeatNames);
 }
 
+// 세션 복원에 성공해 직원/관리자 화면으로 바로 진입했으면 true,
+// 로그인 화면을 보여줘야 하면 false를 반환한다.
+// (성공 시에는 processLoginAction이 이미 최종 화면 전환까지 마친 상태)
 async function restoreAutoLogin() {
     const savedSession = restoreSession();
     if (!savedSession) {
-        return;
+        return false;
     }
 
     try {
         await auth.authStateReady();
         if (!auth.currentUser) {
             clearSession();
-            return;
+            return false;
         }
         const claims = (await auth.currentUser.getIdTokenResult()).claims;
         if (claims.branch !== savedSession.branch || claims.userId !== savedSession.user) {
             await logoutFirebase();
             clearSession();
-            return;
+            return false;
         }
         syncBranchSelection(savedSession.branch);
         const isAdmin = claims.role === "admin";
         await checkDailyReset(isAdmin);
         processLoginAction(savedSession.user, isAdmin);
+        return true;
     } catch (error) {
         console.error("자동 로그인 실패:", error);
         clearSession();
+        return false;
     }
 }
 
+// Firebase Auth/세션 확인이 끝날 때까지는 loading-screen만 보여주고
+// 로그인·직원·관리자 화면은 노출하지 않는다. 확인이 끝나면 최종 화면을
+// (세션 복원 성공 시 직원/관리자 화면, 실패 시 로그인 화면) 한 번만 정한다.
 async function init() {
     document.title = APP_DISPLAY_NAME;
-    switchScreen("login");
+    switchScreen("loading");
     renderBranchOptions();
     syncBranchSelection(restoreSelectedBranch());
     bindEvents();
+    registerBackButtonListener();
     state.todayString = "";
-    await restoreAutoLogin();
+
+    const restored = await restoreAutoLogin();
+    if (!restored) {
+        switchScreen("login");
+    }
 }
 
 window.addEventListener("load", init);

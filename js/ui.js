@@ -36,9 +36,10 @@ export function switchScreen(target) {
     Object.values(screens).forEach((screen) => screen.classList.add("hidden"));
     screens[target].classList.remove("hidden");
 
-    const isLoginScreen = target === "login";
-    document.documentElement.classList.toggle("login-active", isLoginScreen);
-    document.body.classList.toggle("login-active", isLoginScreen);
+    // loading 화면도 login과 같은 전체화면 잠금 레이아웃을 사용한다.
+    const isFullScreenLock = target === "login" || target === "loading";
+    document.documentElement.classList.toggle("login-active", isFullScreenLock);
+    document.body.classList.toggle("login-active", isFullScreenLock);
 }
 
 export function updateBranchBadges() {

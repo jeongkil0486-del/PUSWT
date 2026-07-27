@@ -121,6 +121,34 @@ export function registerAppStateListener(handlers) {
     });
 }
 
+let backButtonInterceptor = null;
+let backButtonListenerRegistered = false;
+
+// 전체화면 팝업 등이 열려 있을 때 Android 뒤로가기를 가로채고 싶은 모듈이
+// 호출한다. 여러 번 호출되면 마지막에 등록한 판별 함수만 사용한다.
+// interceptor가 true를 반환하면 뒤로가기를 소비(팝업 닫기 등)한 것으로 보고
+// 기존 기본 동작(웹뷰 히스토리 back / 앱 종료)은 실행하지 않는다.
+export function setBackButtonInterceptor(interceptor) {
+    backButtonInterceptor = interceptor;
+}
+
+// Capacitor의 기본 뒤로가기 동작(캔고백이면 히스토리 back, 아니면 앱 종료)을
+// 그대로 재현하되, backButtonInterceptor가 소비한 경우에는 건드리지 않는다.
+export function registerBackButtonListener() {
+    if (!isNativeAndroid() || backButtonListenerRegistered) return;
+    backButtonListenerRegistered = true;
+    App.addListener("backButton", ({ canGoBack }) => {
+        if (backButtonInterceptor?.()) {
+            return;
+        }
+        if (canGoBack) {
+            window.history.back();
+        } else {
+            App.exitApp();
+        }
+    });
+}
+
 export async function initializePushForLogin() {
     if (!isNativeAndroid() || !state.currentUser || state.isAdmin) return;
     await registerListeners();

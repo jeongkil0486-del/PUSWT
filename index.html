@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="TAS WT">
@@ -17,7 +17,7 @@
     <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
     <title>TAS Walkie-Talkie</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="css/style.css?v=20260708-ui-11">
+    <link rel="stylesheet" href="css/style.css?v=20260708-ui-12">
 </head>
 <body>
 
@@ -27,7 +27,15 @@
         <strong id="foreground-notification-title"></strong>
         <span id="foreground-notification-body"></span>
     </div>
-    <div id="login-screen" class="screen login-screen">
+    <div id="loading-screen" class="screen loading-screen">
+        <div class="login-screen-bg">
+            <div class="login-photo-bg"></div>
+            <div class="login-photo-overlay"></div>
+        </div>
+        <div class="loading-spinner" role="status" aria-label="로딩 중"></div>
+    </div>
+
+    <div id="login-screen" class="screen login-screen hidden">
         <div class="login-screen-bg">
             <div class="login-photo-bg"></div>
             <div class="login-photo-overlay"></div>
@@ -74,7 +82,7 @@
                     <span class="control-balance" aria-hidden="true"></span>
                     <span class="control-body control-body-centered">
                         <span class="control-content control-content-id">
-                            <input type="text" id="login-id" class="control-input control-input-centered control-input-id login-input" placeholder="ID" data-base-length="2">
+                            <input type="text" id="login-id" class="control-input control-input-id login-input" placeholder="ID" data-base-length="2" autocomplete="username" autocapitalize="none" spellcheck="false" enterkeyhint="next">
                         </span>
                     </span>
                     <span class="control-trailing control-trailing-blank" aria-hidden="true"></span>
@@ -203,8 +211,8 @@
             </div>
 
             <div class="admin-section">
-                <h3>최근 알림 이력</h3>
-                <div id="notification-history" class="notification-history">불러오는 중...</div>
+                <h3>최근 알림 내역</h3>
+                <button id="btn-notification-history" type="button" class="btn btn-primary admin-full-btn">최근 알림 내역 보기</button>
             </div>
 
             <div class="admin-section">
@@ -243,6 +251,20 @@
     </div>
 </div>
 
-<script type="module" src="js/app.js?v=20260708-ui-11"></script>
+<!-- 관리자 최근 알림 내역 팝업 (seat-names-panel과 별도 class/id 사용) -->
+<div id="notification-history-panel" class="hidden notif-history-overlay">
+    <div class="notif-history-box">
+        <div class="notif-history-header">
+            <div class="notif-history-header-text">
+                <span>최근 알림 내역</span>
+                <span id="notif-history-branch-badge" class="branch-pill"></span>
+            </div>
+            <button id="btn-notification-history-close" class="notif-close-btn" aria-label="닫기">✕</button>
+        </div>
+        <div id="notification-history" class="notification-history">불러오는 중...</div>
+    </div>
+</div>
+
+<script type="module" src="js/app.js?v=20260708-ui-12"></script>
 </body>
 </html>

@@ -5,12 +5,19 @@ import android.app.NotificationManager;
 import android.os.Build;
 import android.os.Bundle;
 
+import androidx.core.view.WindowCompat;
+
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Android 15(targetSdk 35)부터는 edge-to-edge가 시스템에 의해 강제되므로,
+        // 그보다 낮은 버전에서도 동일하게 동작하도록 명시적으로 켠다.
+        // 이렇게 해야 WebView가 시스템 바 인셋을 받아 CSS env(safe-area-inset-*)
+        // 값을 정상적으로 계산할 수 있다. 상태바 자체를 숨기지는 않는다.
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         createNotificationChannels();
     }
 
