@@ -4,6 +4,8 @@ import {
     collectWebPushDevices,
     createSubscriptionRecord,
     createWebPushPayload,
+    deliverWebPushBatch,
+    normalizeVapidKeys,
     resolveEmployeeIdentity,
     safeWebPushError,
     sanitizeSubscription,
@@ -12,11 +14,17 @@ import {
     validateDeviceId,
     webPushSubscriptionPath
 } from "../lib/web-push.js";
+import {
+    applyWebPushConfiguration,
+    asWebPushTestConfigurationError
+} from "../lib/web-push-config.js";
 
 const validSubscription = {
     endpoint: "https://push.example.test/device/123",
     keys: { p256dh: "AQIDBA", auth: "BQYHCA" }
 };
+const validVapidPublicKey = `B${"A".repeat(86)}`;
+const validVapidPrivateKey = "A".repeat(43);
 
 test("인증 없는 Web Push 등록을 거부한다", () => {
     assert.throws(() => resolveEmployeeIdentity(null), { code: "unauthenticated" });
@@ -144,4 +152,80 @@ test("표시 가능한 알림 payload에 경로와 고유 tag를 포함한다", 
     assert.equal(payload.url, "/?notification=urgent");
     assert.equal(payload.tag, "taswt-urgent-abc");
     assert.equal(payload.timestamp, 123);
+});
+
+test("VAPID keys trim surrounding whitespace and line breaks", () => {
+    assert.deepEqual(
+        normalizeVapidKeys(` \r\n${validVapidPublicKey}\r\n`, `\n${validVapidPrivateKey} \t`),
+        { publicKey: validVapidPublicKey, privateKey: validVapidPrivateKey }
+    );
+});
+
+test("zero Web Push devices skip configuration and preserve an Android result", async () => {
+    let configureCalls = 0;
+    const androidSuccessDevices = 3;
+    const result = await deliverWebPushBatch({
+        devices: [],
+        configure: () => { configureCalls += 1; },
+        send: async () => {},
+        removeExpired: async () => {}
+    });
+    assert.equal(configureCalls, 0);
+    assert.equal(androidSuccessDevices + result.successDevices, 3);
+    assert.deepEqual(result, {
+        successDevices: 0,
+        failedDevices: 0,
+        configurationFailed: false
+    });
+});
+
+test("configuration failure is isolated, counted, and does not erase Android success", async () => {
+    const errors = [];
+    const androidSuccessDevices = 2;
+    const result = await deliverWebPushBatch({
+        devices: [{ id: 1 }, { id: 2 }],
+        configure: () => { throw new Error("invalid VAPID"); },
+        send: async () => { throw new Error("must not send"); },
+        removeExpired: async () => {},
+        onError: (summary) => errors.push(summary)
+    });
+    assert.equal(androidSuccessDevices + result.successDevices, 2);
+    assert.equal(result.failedDevices, 2);
+    assert.equal(result.configurationFailed, true);
+    assert.deepEqual(errors, [{ category: "configuration" }]);
+});
+
+test("Web Push delivery counts successes and failures exactly", async () => {
+    const removed = [];
+    const result = await deliverWebPushBatch({
+        devices: [{ id: 1 }, { id: 2 }, { id: 3 }],
+        configure: () => {},
+        send: async (device) => {
+            if (device.id === 2) throw { statusCode: 410 };
+            if (device.id === 3) throw { statusCode: 503 };
+        },
+        removeExpired: async (device) => { removed.push(device.id); }
+    });
+    assert.deepEqual(result, {
+        successDevices: 1,
+        failedDevices: 2,
+        configurationFailed: false
+    });
+    assert.deepEqual(removed, [2]);
+});
+
+test("self-test configuration failure exposes a clear HttpsError", () => {
+    let configurationError;
+    try {
+        applyWebPushConfiguration({
+            publicValue: "not a key",
+            privateValue: validVapidPrivateKey,
+            subject: "mailto:test@example.com",
+            setVapidDetails: () => {}
+        });
+    } catch (error) {
+        configurationError = asWebPushTestConfigurationError(error);
+    }
+    assert.equal(configurationError.code, "failed-precondition");
+    assert.equal(configurationError.message, "아이폰 알림 서버 설정을 확인해주세요.");
 });
