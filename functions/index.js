@@ -14,6 +14,7 @@ import {
     collectWebPushDevices,
     createSubscriptionRecord,
     createWebPushPayload,
+    deliverWebPushBatch,
     resolveEmployeeIdentity,
     safeWebPushError,
     sanitizeSubscription,
@@ -22,6 +23,11 @@ import {
     validateDeviceId,
     webPushSubscriptionPath
 } from "./lib/web-push.js";
+import {
+    applyWebPushConfiguration,
+    asWebPushTestConfigurationError,
+    readWebPushPublicKey
+} from "./lib/web-push-config.js";
 
 initializeApp();
 
@@ -86,12 +92,12 @@ function requireWebPushInput(getValue) {
 }
 
 function configureWebPush() {
-    const publicKey = webPushVapidPublicKey.value();
-    const privateKey = webPushVapidPrivateKey.value();
-    if (!publicKey || !privateKey) {
-        throw new HttpsError("failed-precondition", "Web Push VAPID 설정이 완료되지 않았습니다.");
-    }
-    webpush.setVapidDetails(WEB_PUSH_SUBJECT, publicKey, privateKey);
+    applyWebPushConfiguration({
+        publicValue: webPushVapidPublicKey.value(),
+        privateValue: webPushVapidPrivateKey.value(),
+        subject: WEB_PUSH_SUBJECT,
+        setVapidDetails: (...args) => webpush.setVapidDetails(...args)
+    });
 }
 
 async function enforceRateLimit(uid) {
@@ -253,10 +259,7 @@ export const getWebPushPublicKey = onCall({
     secrets: [webPushVapidPublicKey]
 }, async (request) => {
     requireEmployee(request);
-    const publicKey = webPushVapidPublicKey.value();
-    if (!publicKey) {
-        throw new HttpsError("failed-precondition", "Web Push VAPID 설정이 완료되지 않았습니다.");
-    }
+    const publicKey = readWebPushPublicKey(webPushVapidPublicKey.value());
     return { publicKey };
 });
 
@@ -294,8 +297,8 @@ export const sendWebPushTestToSelf = onCall({
         throw new HttpsError("not-found", "아이폰 알림을 먼저 활성화해주세요.");
     }
     const subscription = requireWebPushInput(() => sanitizeSubscription(stored));
-    configureWebPush();
     try {
+        configureWebPush();
         await webpush.sendNotification(
             subscription,
             createWebPushPayload({
@@ -309,6 +312,11 @@ export const sendWebPushTestToSelf = onCall({
         );
         return { sent: true };
     } catch (error) {
+        const configurationError = asWebPushTestConfigurationError(error);
+        if (configurationError !== error) {
+            console.error("Web Push test configuration failed", { category: "configuration" });
+            throw configurationError;
+        }
         const summary = safeWebPushError(error);
         if (shouldDeleteWebPushSubscription(summary.statusCode)) {
             await ref.remove();
@@ -357,8 +365,8 @@ async function sendNotification({ request, type, targetType, title, message, cha
     let androidFailedDevices = 0;
     let webPushSuccessDevices = 0;
     let webPushFailedDevices = 0;
+    let webPushConfigurationFailed = false;
     const androidCleanup = [];
-    const webPushCleanup = [];
     const notificationRef = audience.root.child("notificationLogs").push();
     const notificationId = notificationRef.key || `${Date.now()}`;
 
@@ -391,7 +399,6 @@ async function sendNotification({ request, type, targetType, title, message, cha
     }
     await Promise.all(androidCleanup);
 
-    configureWebPush();
     const payload = createWebPushPayload({
         title,
         body: message,
@@ -399,26 +406,21 @@ async function sendNotification({ request, type, targetType, title, message, cha
         branchCode: branch,
         id: notificationId
     });
-    for (const device of audience.webPushDevices) {
-        try {
-            await webpush.sendNotification(device.subscription, payload, {
+    const webPushResult = await deliverWebPushBatch({
+        devices: audience.webPushDevices,
+        configure: configureWebPush,
+        send: (device) => webpush.sendNotification(device.subscription, payload, {
                 TTL: WEB_PUSH_TTL[type],
                 urgency: type === "urgent" ? "high" : "normal"
-            });
-            webPushSuccessDevices += 1;
-        } catch (error) {
-            webPushFailedDevices += 1;
-            const summary = safeWebPushError(error);
-            if (shouldDeleteWebPushSubscription(summary.statusCode)) {
-                webPushCleanup.push(
-                    audience.root.child(`webPushSubscriptions/${device.userId}/${device.deviceId}`).remove()
-                );
-            } else {
-                console.error("Web Push delivery failed", summary);
-            }
-        }
-    }
-    await Promise.all(webPushCleanup);
+            }),
+        removeExpired: (device) => audience.root
+            .child(`webPushSubscriptions/${device.userId}/${device.deviceId}`)
+            .remove(),
+        onError: (summary) => console.error("Web Push delivery failed", summary)
+    });
+    webPushSuccessDevices = webPushResult.successDevices;
+    webPushFailedDevices = webPushResult.failedDevices;
+    webPushConfigurationFailed = webPushResult.configurationFailed;
 
     const successDevices = androidSuccessDevices + webPushSuccessDevices;
     const failedDevices = androidFailedDevices + webPushFailedDevices;
@@ -438,6 +440,7 @@ async function sendNotification({ request, type, targetType, title, message, cha
         androidFailedDevices,
         webPushSuccessDevices,
         webPushFailedDevices,
+        webPushConfigurationFailed,
         usersWithoutTokens: audience.usersWithoutTokens.length,
         usersWithoutAnyPush: audience.usersWithoutAnyPush.length,
         sentAt: Date.now()

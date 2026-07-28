@@ -13,13 +13,17 @@ function setSending(button, sending) {
 }
 
 function formatResult(result) {
-    return [
+    const lines = [
         `대상 직원 ${result.targetUsers}명`,
         `Android 전송 성공 ${result.androidSuccessDevices ?? result.successDevices ?? 0}대`,
         `iPhone 전송 성공 ${result.webPushSuccessDevices ?? 0}대`,
         `전송 실패 ${result.failedDevices ?? 0}대`,
         `알림 미등록 사용자 ${result.usersWithoutAnyPush ?? result.usersWithoutTokens ?? 0}명`
-    ].join("\n");
+    ];
+    if (result.webPushConfigurationFailed) {
+        lines.push("iPhone Web Push 설정 오류가 발생했습니다. Android 전송 결과는 유지되었습니다.");
+    }
+    return lines.join("\n");
 }
 
 export async function sendUrgentNotification() {

@@ -1,5 +1,6 @@
 const DEVICE_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 const KEY_PATTERN = /^[A-Za-z0-9_-]+={0,2}$/;
+const VAPID_KEY_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 export class WebPushInputError extends Error {
     constructor(code, message) {
@@ -122,6 +123,77 @@ export function safeWebPushError(error) {
                     ? "server"
                     : "delivery"
     };
+}
+
+export function normalizeVapidPublicKey(publicValue) {
+    const publicKey = typeof publicValue === "string" ? publicValue.trim() : "";
+    const decodedPublicKey = Buffer.from(publicKey, "base64url");
+    if (
+        !VAPID_KEY_PATTERN.test(publicKey)
+        || decodedPublicKey.length !== 65
+        || decodedPublicKey[0] !== 4
+    ) {
+        throw new WebPushInputError(
+            "failed-precondition",
+            "Web Push VAPID public key format is invalid."
+        );
+    }
+    return publicKey;
+}
+
+export function normalizeVapidKeys(publicValue, privateValue) {
+    const publicKey = normalizeVapidPublicKey(publicValue);
+    const privateKey = typeof privateValue === "string" ? privateValue.trim() : "";
+    if (
+        !VAPID_KEY_PATTERN.test(privateKey)
+        || Buffer.from(privateKey, "base64url").length !== 32
+    ) {
+        throw new WebPushInputError(
+            "failed-precondition",
+            "Web Push VAPID private key format is invalid."
+        );
+    }
+    return { publicKey, privateKey };
+}
+
+export async function deliverWebPushBatch({
+    devices,
+    configure,
+    send,
+    removeExpired,
+    onError = () => {}
+}) {
+    const result = {
+        successDevices: 0,
+        failedDevices: 0,
+        configurationFailed: false
+    };
+    if (devices.length === 0) return result;
+
+    try {
+        configure();
+    } catch {
+        result.failedDevices = devices.length;
+        result.configurationFailed = true;
+        onError({ category: "configuration" });
+        return result;
+    }
+
+    for (const device of devices) {
+        try {
+            await send(device);
+            result.successDevices += 1;
+        } catch (error) {
+            result.failedDevices += 1;
+            const summary = safeWebPushError(error);
+            if (shouldDeleteWebPushSubscription(summary.statusCode)) {
+                await removeExpired(device);
+            } else {
+                onError(summary);
+            }
+        }
+    }
+    return result;
 }
 
 export function createWebPushPayload({ title, body, type, branchCode, id, timestamp = Date.now() }) {
