@@ -15,9 +15,10 @@ function setSending(button, sending) {
 function formatResult(result) {
     return [
         `대상 직원 ${result.targetUsers}명`,
-        `성공 기기 ${result.successDevices}대`,
-        `실패 기기 ${result.failedDevices}대`,
-        `FCM 토큰이 없는 직원 ${result.usersWithoutTokens}명`
+        `Android 전송 성공 ${result.androidSuccessDevices ?? result.successDevices ?? 0}대`,
+        `iPhone 전송 성공 ${result.webPushSuccessDevices ?? 0}대`,
+        `전송 실패 ${result.failedDevices ?? 0}대`,
+        `알림 미등록 사용자 ${result.usersWithoutAnyPush ?? result.usersWithoutTokens ?? 0}명`
     ].join("\n");
 }
 
@@ -104,7 +105,15 @@ function renderHistoryEntry(item) {
         `성공 ${item.successDevices || 0}대`,
         `실패 ${item.failedDevices || 0}대`
     ];
-    if (typeof item.usersWithoutTokens === "number") {
+    if (typeof item.androidSuccessDevices === "number") {
+        statsParts.push(`Android ${item.androidSuccessDevices}대`);
+    }
+    if (typeof item.webPushSuccessDevices === "number") {
+        statsParts.push(`iPhone ${item.webPushSuccessDevices}대`);
+    }
+    if (typeof item.usersWithoutAnyPush === "number") {
+        statsParts.push(`미등록 ${item.usersWithoutAnyPush}명`);
+    } else if (typeof item.usersWithoutTokens === "number") {
         statsParts.push(`토큰없음 ${item.usersWithoutTokens}명`);
     }
     const stats = document.createElement("small");

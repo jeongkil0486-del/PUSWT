@@ -1,11 +1,13 @@
 {
-  "name": "TAS Walkie-Talkie",
+  "name": "TAS WT",
   "short_name": "TAS WT",
+  "id": "/",
   "display": "standalone",
   "background_color": "#10295F",
   "theme_color": "#10295F",
   "orientation": "portrait",
   "start_url": "/",
+  "scope": "/",
   "icons": [
     {
       "src": "/assets/icon-192.png",

@@ -66,6 +66,12 @@ import {
     sendGeneralNotification,
     sendUrgentNotification
 } from "./notifications.js";
+import {
+    bindWebPushEvents,
+    deactivateWebPushForLogout,
+    initializeWebPushForLogin,
+    registerWebPushNavigationHandler
+} from "./web-push.js";
 
 function renderBranchOptions() {
     const select = document.getElementById("branch-select");
@@ -134,6 +140,7 @@ function processLoginAction(id, adminFlag) {
     switchScreen("main");
     listenToBoard();
     initializePushForLogin().catch((error) => console.error("푸시 초기화 실패:", error));
+    initializeWebPushForLogin().catch((error) => console.error("iPhone Web Push 초기화 실패:", error));
 }
 
 async function handleLogin() {
@@ -189,6 +196,7 @@ function bindEvents() {
     });
     bindFocusableControlRows();
     document.getElementById("btn-login").addEventListener("click", handleLogin);
+    bindWebPushEvents();
     document.getElementById("btn-toggle-password").addEventListener("click", togglePasswordVisibility);
     document.getElementById("btn-mode-self").addEventListener("click", () => setMode("본인"));
     document.getElementById("btn-mode-crew").addEventListener("click", () => setMode("크루"));
@@ -196,6 +204,12 @@ function bindEvents() {
     document.getElementById("btn-edit-mode").addEventListener("click", (event) => toggleEditMode(event.currentTarget));
     const handleLogout = async () => {
         closeNotificationHistoryPanel();
+        try {
+            await deactivateWebPushForLogout();
+        } catch {
+            alert("아이폰 알림 해제에 실패했습니다. 네트워크를 확인하고 로그아웃을 다시 시도해주세요.");
+            return;
+        }
         await deactivateCurrentDeviceToken();
         await logoutFirebase();
         logoutAction();
@@ -268,6 +282,7 @@ async function init() {
     renderBranchOptions();
     syncBranchSelection(restoreSelectedBranch());
     initializeAndroidImeSafeLogin();
+    registerWebPushNavigationHandler();
     bindEvents();
     registerBackButtonListener();
     state.todayString = "";

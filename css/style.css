@@ -100,6 +100,53 @@ body.login-active {
     line-height: 1.5;
 }
 
+.ios-web-push {
+    margin: 0 0 16px;
+    padding: 16px;
+    border: 1px solid #d8def0;
+    border-radius: 14px;
+    background: #f7f9ff;
+}
+
+.ios-web-push h3,
+.ios-web-push p {
+    margin-top: 0;
+}
+
+.ios-web-push-status {
+    margin-bottom: 6px;
+    font-weight: 700;
+    color: #10295f;
+}
+
+.ios-web-push-status[data-kind="success"] {
+    color: #147a43;
+}
+
+.ios-web-push-status[data-kind="warning"],
+.ios-web-push-status[data-kind="error"] {
+    color: #a43a2d;
+}
+
+.ios-web-push-detail,
+.ios-web-push-guide {
+    color: #4d5870;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.ios-web-push-guide ol {
+    margin: 8px 0 0;
+    padding-left: 22px;
+}
+
+.ios-web-push-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
 .form-notice {
     padding: 10px;
     border-radius: 8px;

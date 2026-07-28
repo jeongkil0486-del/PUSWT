@@ -5,14 +5,32 @@ import { getMessaging } from "firebase-admin/messaging";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
+import webpush from "web-push";
 import { collectDevices, selectTargetUsers } from "./lib/audience.js";
 import { branchPath } from "./lib/database-path.js";
 import { updateMigratedUser } from "./lib/user-migration.js";
+import {
+    WebPushInputError,
+    collectWebPushDevices,
+    createSubscriptionRecord,
+    createWebPushPayload,
+    resolveEmployeeIdentity,
+    safeWebPushError,
+    sanitizeSubscription,
+    shouldDeleteWebPushSubscription,
+    usersWithoutAnyPush,
+    validateDeviceId,
+    webPushSubscriptionPath
+} from "./lib/web-push.js";
 
 initializeApp();
 
 const legacyAdminCredentials = defineSecret("LEGACY_ADMIN_CREDENTIALS_JSON");
+const webPushVapidPublicKey = defineSecret("WEB_PUSH_VAPID_PUBLIC_KEY");
+const webPushVapidPrivateKey = defineSecret("WEB_PUSH_VAPID_PRIVATE_KEY");
 const REGION = "asia-northeast3";
+const WEB_PUSH_SUBJECT = "https://tas-wt.vercel.app/";
+const WEB_PUSH_TTL = Object.freeze({ urgent: 300, general: 3600, test: 60 });
 const BRANCHES = new Set(["PUS", "TAE", "CJJ", "GMP", "CJU", "KWJ", "ICN"]);
 const ADMIN_IDS = new Set(["PUSWT", "TAEWT", "CJJWT", "GMPWT", "CJUWT", "KWJWT", "ICNWT"]);
 const INVALID_TOKEN_CODES = new Set([
@@ -44,6 +62,38 @@ function requireAdmin(request) {
     return normalizeBranch(request.auth.token.branch);
 }
 
+function requireEmployee(request) {
+    try {
+        const identity = resolveEmployeeIdentity(request.auth);
+        return { ...identity, branch: normalizeBranch(identity.branch) };
+    } catch (error) {
+        if (error instanceof WebPushInputError) {
+            throw new HttpsError(error.code, error.message);
+        }
+        throw error;
+    }
+}
+
+function requireWebPushInput(getValue) {
+    try {
+        return getValue();
+    } catch (error) {
+        if (error instanceof WebPushInputError) {
+            throw new HttpsError(error.code, error.message);
+        }
+        throw error;
+    }
+}
+
+function configureWebPush() {
+    const publicKey = webPushVapidPublicKey.value();
+    const privateKey = webPushVapidPrivateKey.value();
+    if (!publicKey || !privateKey) {
+        throw new HttpsError("failed-precondition", "Web Push VAPID 설정이 완료되지 않았습니다.");
+    }
+    webpush.setVapidDetails(WEB_PUSH_SUBJECT, publicKey, privateKey);
+}
+
 async function enforceRateLimit(uid) {
     const ref = getDatabase().ref(`_internal/notificationRateLimits/${uid}`);
     const now = Date.now();
@@ -53,6 +103,18 @@ async function enforceRateLimit(uid) {
     });
     if (!result.committed) {
         throw new HttpsError("resource-exhausted", "알림은 10초 간격으로 전송할 수 있습니다.");
+    }
+}
+
+async function enforceWebPushTestRateLimit(uid, deviceId) {
+    const ref = getDatabase().ref(`_internal/webPushTestRateLimits/${uid}/${deviceId}`);
+    const now = Date.now();
+    const result = await ref.transaction((previous) => {
+        if (previous && now - previous < 30000) return;
+        return now;
+    });
+    if (!result.committed) {
+        throw new HttpsError("resource-exhausted", "테스트 알림은 30초 간격으로 전송할 수 있습니다.");
     }
 }
 
@@ -186,12 +248,84 @@ export const deleteEmployeeAccount = onCall({ region: REGION }, async (request) 
     return { deleted: true };
 });
 
+export const getWebPushPublicKey = onCall({
+    region: REGION,
+    secrets: [webPushVapidPublicKey]
+}, async (request) => {
+    requireEmployee(request);
+    const publicKey = webPushVapidPublicKey.value();
+    if (!publicKey) {
+        throw new HttpsError("failed-precondition", "Web Push VAPID 설정이 완료되지 않았습니다.");
+    }
+    return { publicKey };
+});
+
+export const registerWebPushSubscription = onCall({ region: REGION }, async (request) => {
+    const { branch, userId } = requireEmployee(request);
+    const deviceId = requireWebPushInput(() => validateDeviceId(request.data?.deviceId));
+    const subscription = requireWebPushInput(() => sanitizeSubscription(request.data?.subscription));
+    const root = getDatabase().ref(branchPath(branch));
+    const subscriptionRef = root.child(webPushSubscriptionPath(userId, deviceId));
+    const existing = (await subscriptionRef.get()).val() || {};
+    const now = Date.now();
+    await subscriptionRef.set(createSubscriptionRecord(subscription, existing, now));
+    return { registered: true };
+});
+
+export const unregisterWebPushSubscription = onCall({ region: REGION }, async (request) => {
+    const { branch, userId } = requireEmployee(request);
+    const deviceId = requireWebPushInput(() => validateDeviceId(request.data?.deviceId));
+    const root = getDatabase().ref(branchPath(branch));
+    await root.child(webPushSubscriptionPath(userId, deviceId)).remove();
+    return { unregistered: true };
+});
+
+export const sendWebPushTestToSelf = onCall({
+    region: REGION,
+    secrets: [webPushVapidPublicKey, webPushVapidPrivateKey]
+}, async (request) => {
+    const { uid, branch, userId } = requireEmployee(request);
+    const deviceId = requireWebPushInput(() => validateDeviceId(request.data?.deviceId));
+    await enforceWebPushTestRateLimit(uid, deviceId);
+    const root = getDatabase().ref(branchPath(branch));
+    const ref = root.child(webPushSubscriptionPath(userId, deviceId));
+    const stored = (await ref.get()).val();
+    if (!stored || stored.active === false || stored.platform !== "ios-pwa") {
+        throw new HttpsError("not-found", "아이폰 알림을 먼저 활성화해주세요.");
+    }
+    const subscription = requireWebPushInput(() => sanitizeSubscription(stored));
+    configureWebPush();
+    try {
+        await webpush.sendNotification(
+            subscription,
+            createWebPushPayload({
+                title: "TAS WT 알림 테스트",
+                body: "아이폰 알림이 정상적으로 연결되었습니다.",
+                type: "test",
+                branchCode: branch,
+                id: `${Date.now()}-${deviceId}`
+            }),
+            { TTL: WEB_PUSH_TTL.test, urgency: "normal" }
+        );
+        return { sent: true };
+    } catch (error) {
+        const summary = safeWebPushError(error);
+        if (shouldDeleteWebPushSubscription(summary.statusCode)) {
+            await ref.remove();
+            throw new HttpsError("not-found", "아이폰 알림을 다시 활성화해주세요.");
+        }
+        console.error("Web Push test delivery failed", summary);
+        throw new HttpsError("unavailable", "테스트 알림 전송에 실패했습니다.");
+    }
+});
+
 async function loadAudience(branch, targetType) {
     const root = getDatabase().ref(branchPath(branch));
-    const [whitelistSnapshot, numbersSnapshot, tokensSnapshot] = await Promise.all([
+    const [whitelistSnapshot, numbersSnapshot, tokensSnapshot, webPushSnapshot] = await Promise.all([
         root.child("system/whitelist").get(),
         root.child("system/boardState/numbers").get(),
-        root.child("pushTokens").get()
+        root.child("pushTokens").get(),
+        root.child("webPushSubscriptions").get()
     ]);
     const targetUsers = selectTargetUsers({
         whitelist: whitelistSnapshot.val() || {},
@@ -201,16 +335,32 @@ async function loadAudience(branch, targetType) {
     });
     const tokenTree = tokensSnapshot.val() || {};
     const { devices, usersWithoutTokens } = collectDevices(targetUsers, tokenTree);
-    return { root, targetUsers, devices, usersWithoutTokens };
+    const { devices: webPushDevices } = collectWebPushDevices(
+        targetUsers,
+        webPushSnapshot.val() || {}
+    );
+    return {
+        root,
+        targetUsers,
+        devices,
+        webPushDevices,
+        usersWithoutTokens,
+        usersWithoutAnyPush: usersWithoutAnyPush(targetUsers, devices, webPushDevices)
+    };
 }
 
 async function sendNotification({ request, type, targetType, title, message, channelId }) {
     const branch = requireAdmin(request);
     await enforceRateLimit(request.auth.uid);
     const audience = await loadAudience(branch, targetType);
-    let successDevices = 0;
-    let failedDevices = 0;
-    const cleanup = [];
+    let androidSuccessDevices = 0;
+    let androidFailedDevices = 0;
+    let webPushSuccessDevices = 0;
+    let webPushFailedDevices = 0;
+    const androidCleanup = [];
+    const webPushCleanup = [];
+    const notificationRef = audience.root.child("notificationLogs").push();
+    const notificationId = notificationRef.key || `${Date.now()}`;
 
     for (let offset = 0; offset < audience.devices.length; offset += 500) {
         const chunk = audience.devices.slice(offset, offset + 500);
@@ -229,17 +379,49 @@ async function sendNotification({ request, type, targetType, title, message, cha
                 }
             }
         });
-        successDevices += response.successCount;
-        failedDevices += response.failureCount;
+        androidSuccessDevices += response.successCount;
+        androidFailedDevices += response.failureCount;
         response.responses.forEach((item, index) => {
             const code = item.error?.code;
             if (code && INVALID_TOKEN_CODES.has(code)) {
                 const device = chunk[index];
-                cleanup.push(audience.root.child(`pushTokens/${device.userId}/${device.deviceId}`).remove());
+                androidCleanup.push(audience.root.child(`pushTokens/${device.userId}/${device.deviceId}`).remove());
             }
         });
     }
-    await Promise.all(cleanup);
+    await Promise.all(androidCleanup);
+
+    configureWebPush();
+    const payload = createWebPushPayload({
+        title,
+        body: message,
+        type,
+        branchCode: branch,
+        id: notificationId
+    });
+    for (const device of audience.webPushDevices) {
+        try {
+            await webpush.sendNotification(device.subscription, payload, {
+                TTL: WEB_PUSH_TTL[type],
+                urgency: type === "urgent" ? "high" : "normal"
+            });
+            webPushSuccessDevices += 1;
+        } catch (error) {
+            webPushFailedDevices += 1;
+            const summary = safeWebPushError(error);
+            if (shouldDeleteWebPushSubscription(summary.statusCode)) {
+                webPushCleanup.push(
+                    audience.root.child(`webPushSubscriptions/${device.userId}/${device.deviceId}`).remove()
+                );
+            } else {
+                console.error("Web Push delivery failed", summary);
+            }
+        }
+    }
+    await Promise.all(webPushCleanup);
+
+    const successDevices = androidSuccessDevices + webPushSuccessDevices;
+    const failedDevices = androidFailedDevices + webPushFailedDevices;
 
     const log = {
         branchCode: branch,
@@ -252,14 +434,26 @@ async function sendNotification({ request, type, targetType, title, message, cha
         targetUsers: audience.targetUsers.length,
         successDevices,
         failedDevices,
+        androidSuccessDevices,
+        androidFailedDevices,
+        webPushSuccessDevices,
+        webPushFailedDevices,
         usersWithoutTokens: audience.usersWithoutTokens.length,
+        usersWithoutAnyPush: audience.usersWithoutAnyPush.length,
         sentAt: Date.now()
     };
-    await audience.root.child("notificationLogs").push(log);
-    return { ...log, usersWithoutTokensList: audience.usersWithoutTokens };
+    await notificationRef.set(log);
+    return {
+        ...log,
+        usersWithoutTokensList: audience.usersWithoutTokens,
+        usersWithoutAnyPushList: audience.usersWithoutAnyPush
+    };
 }
 
-export const sendUrgentBranchNotification = onCall({ region: REGION }, async (request) => {
+export const sendUrgentBranchNotification = onCall({
+    region: REGION,
+    secrets: [webPushVapidPublicKey, webPushVapidPrivateKey]
+}, async (request) => {
     const targetType = String(request.data?.targetType || "");
     if (!["occupied", "unoccupied", "all"].includes(targetType)) {
         throw new HttpsError("invalid-argument", "알림 대상 유형이 올바르지 않습니다.");
@@ -275,7 +469,10 @@ export const sendUrgentBranchNotification = onCall({ region: REGION }, async (re
     });
 });
 
-export const sendGeneralBranchNotification = onCall({ region: REGION }, async (request) => {
+export const sendGeneralBranchNotification = onCall({
+    region: REGION,
+    secrets: [webPushVapidPublicKey, webPushVapidPrivateKey]
+}, async (request) => {
     const title = cleanString(request.data?.title, "알림 제목", 80);
     const message = cleanString(request.data?.message, "알림 내용", 500);
     return sendNotification({
